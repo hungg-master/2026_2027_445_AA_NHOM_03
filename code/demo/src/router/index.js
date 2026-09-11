@@ -3,7 +3,21 @@ import { createRouter, createWebHistory } from "vue-router"; // cài vue-router:
 const routes = [
   {
     path: "/",
-    redirect: "/my-schedule",
+    name: "trang-chu",
+    component: () => import("../components/EduLink/LandingPage.vue"),
+    meta: { layout: "blank" }
+  },
+  {
+    path: "/home",
+    redirect: "/"
+  },
+  {
+    path: "/trang-chu",
+    redirect: "/"
+  },
+  {
+    path: "/landing-page",
+    redirect: "/"
   },
   {
     path: "/dang-ky",
@@ -54,6 +68,62 @@ const routes = [
   {
     path: "/hoc-phi",
     redirect: "/thanh-toan"
+  },
+  {
+    path: "/giao-vien",
+    name: "giao-vien",
+    component: () => import("../components/EduLink/TeacherProfile.vue"),
+    meta: { layout: "blank" }
+  },
+  {
+    path: "/teacher-profile",
+    redirect: "/giao-vien"
+  },
+  {
+    path: "/hoc-vien",
+    name: "hoc-vien",
+    component: () => import("../components/EduLink/StudentProfile.vue"),
+    meta: { layout: "blank" }
+  },
+  {
+    path: "/student-profile",
+    redirect: "/hoc-vien"
+  },
+  {
+    path: "/ho-so-hoc-vien",
+    redirect: "/hoc-vien"
+  },
+  {
+    path: "/ho-so-giang-vien",
+    name: "ho-so-giang-vien",
+    component: () => import("../components/EduLink/TeacherDashboard.vue"),
+    meta: { layout: "blank" }
+  },
+  {
+    path: "/teacher-dashboard",
+    redirect: "/ho-so-giang-vien"
+  },
+  {
+    path: "/giao-vien-profile",
+    redirect: "/ho-so-giang-vien"
+  },
+  {
+    path: "/ho-so-giao-vien",
+    redirect: "/ho-so-giang-vien"
+  },
+  {
+    path: "/danh-gia",
+    name: "danh-gia",
+    component: () => import("../components/EduLink/LessonReview.vue"),
+    meta: { layout: "blank" }
+  },
+  {
+    path: "/review",
+    redirect: "/danh-gia"
+  },
+  {
+    path: "/danh-gia-buoi-hoc",
+    redirect: "/danh-gia"
   }
 ];
 

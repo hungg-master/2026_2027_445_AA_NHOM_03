@@ -13,6 +13,15 @@
         <nav class="navbar navbar-expand-xl w-100">
             <ul class="navbar-nav justify-content-start flex-grow-1 gap-1">
                 <li class="nav-item">
+                    <router-link to="/">
+                        <a class="nav-link" href="/">
+                            <div class="parent-icon"><i class="fa-solid fa-house"></i>
+                            </div>
+                            <div class="menu-title">Trang Chủ</div>
+                        </a>
+                    </router-link>
+                </li>
+                <li class="nav-item">
                     <router-link to="/dang-ky">
                         <a class="nav-link" href="/dang-ky">
                             <div class="parent-icon"><i class="fa-solid fa-user-plus"></i>
@@ -54,6 +63,42 @@
                             <div class="parent-icon"><i class="fa-solid fa-credit-card"></i>
                             </div>
                             <div class="menu-title">Thanh Toán Học Phí</div>
+                        </a>
+                    </router-link>
+                </li>
+                <li class="nav-item">
+                    <router-link to="/giao-vien">
+                        <a class="nav-link" href="/giao-vien">
+                            <div class="parent-icon"><i class="fa-solid fa-user-tie"></i>
+                            </div>
+                            <div class="menu-title">Hồ Sơ Giảng Viên</div>
+                        </a>
+                    </router-link>
+                </li>
+                <li class="nav-item">
+                    <router-link to="/hoc-vien">
+                        <a class="nav-link" href="/hoc-vien">
+                            <div class="parent-icon"><i class="fa-solid fa-user-graduate"></i>
+                            </div>
+                            <div class="menu-title">Hồ Sơ Học Viên</div>
+                        </a>
+                    </router-link>
+                </li>
+                <li class="nav-item">
+                    <router-link to="/ho-so-giang-vien">
+                        <a class="nav-link" href="/ho-so-giang-vien">
+                            <div class="parent-icon"><i class="fa-solid fa-chalkboard-user"></i>
+                            </div>
+                            <div class="menu-title">Không Gian Giảng Viên</div>
+                        </a>
+                    </router-link>
+                </li>
+                <li class="nav-item">
+                    <router-link to="/danh-gia">
+                        <a class="nav-link" href="/danh-gia">
+                            <div class="parent-icon"><i class="fa-solid fa-star-half-stroke"></i>
+                            </div>
+                            <div class="menu-title">Đánh Giá Buổi Học</div>
                         </a>
                     </router-link>
                 </li>
