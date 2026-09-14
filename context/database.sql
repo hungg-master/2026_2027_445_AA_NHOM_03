@@ -10,10 +10,11 @@ create extension if not exists pgcrypto with schema extensions;
 -- 1. admins
 -- =====================================================================
 create table admins (
-  id         uuid primary key default gen_random_uuid(),
-  email      text not null unique,
-  mat_khau   text not null,
-  ho_ten     text
+  id             uuid primary key default gen_random_uuid(),
+  email          text not null unique,
+  mat_khau       text not null,
+  ho_ten         text,
+  so_dien_thoai  text
 );
 
 -- =====================================================================
@@ -63,6 +64,7 @@ create table giao_viens (
   ngay_sinh             date,
   gioi_tinh             text,
   so_nam_kinh_nghiem    integer,
+  chuc_danh             text,                                -- e.g. Thạc sĩ, Cử nhân, Giáo viên giỏi
   giao_vien_da_duyet    uuid references admins(id),          -- nullable: admin who approved this teacher
   trang_thai_duyet      text check (trang_thai_duyet in ('cho_duyet','da_duyet','tu_choi'))
                         default 'cho_duyet'
@@ -73,9 +75,9 @@ create table giao_viens (
 -- =====================================================================
 create table lop_hocs (
   id                    uuid primary key default gen_random_uuid(),
-  id_giao_vien          uuid references giao_viens(id),
-  id_mon_hoc            uuid references mon_hocs(id),
-  id_phong_hoc          uuid references phong_hocs(id),
+  id_giao_vien          uuid references giao_viens(id) not null,
+  id_mon_hoc            uuid references mon_hocs(id) not null,
+  id_phong_hoc          uuid references phong_hocs(id),      -- nullable when online
   loai_lop              text check (loai_lop in ('dai_tra','kem')),
   hinh_thuc             text check (hinh_thuc in ('online','offline')),
   link_online           text,                                 -- used only when hinh_thuc = 'online'
@@ -91,10 +93,11 @@ create table lop_hocs (
 -- =====================================================================
 create table dang_ky_lops (
   id             uuid primary key default gen_random_uuid(),
-  id_lop_hoc     uuid references lop_hocs(id),
-  id_hoc_vien    uuid references hoc_viens(id),
+  id_lop_hoc     uuid references lop_hocs(id) not null,
+  id_hoc_vien    uuid references hoc_viens(id) not null,
   ngay_dang_ky   timestamptz default now(),
-  trang_thai     text
+  trang_thai     text,
+  constraint uq_dang_ky_lop_hoc_vien unique (id_lop_hoc, id_hoc_vien)
 );
 
 -- =====================================================================
