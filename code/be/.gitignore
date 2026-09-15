@@ -1,0 +1,88 @@
+# ============================================
+# BACKEND - Laravel
+# ============================================
+/vendor/
+node_modules/
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+storage/logs/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/framework/testing/*
+storage/debugbar/
+
+# Cache
+bootstrap/cache/*.php
+
+# Build assets (nếu có build backend)
+/public/build/
+/public/hot
+
+# ============================================
+# FRONTEND - Vue 3 + Vite
+# ============================================
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Production builds
+dist/
+dist-ssr/
+build/
+
+# Local env files
+.env.local
+.env.*.local
+
+# Vite cache
+.vite/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ============================================
+# DATABASE
+# ============================================
+# SQLite
+*.sqlite
+*.sqlite-journal
+*.sqlite3
+
+# MySQL/Postgres dumps
+*.sql
+
+# ============================================
+# OS files
+# ============================================
+Thumbs.db
+.DS_Store
+Desktop.ini
+ehthumbs.db
+ehthumbs_vista.db
