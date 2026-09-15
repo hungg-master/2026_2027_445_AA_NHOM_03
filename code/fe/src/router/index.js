@@ -124,6 +124,43 @@ const routes = [
   {
     path: "/danh-gia-buoi-hoc",
     redirect: "/danh-gia"
+  },
+
+  // ============ TÍNH NĂNG MỚI: LỊCH & LỚP HỌC ============
+  // Giáo viên
+  {
+    path: "/giao-vien/lich-day",
+    name: "giao-vien-lich-day",
+    component: () => import("../components/EduLink/LichDayGiaoVien.vue"),
+    meta: { layout: "blank" }
+  },
+  {
+    path: "/giao-vien/quan-ly-lop",
+    name: "giao-vien-quan-ly-lop",
+    component: () => import("../components/EduLink/QuanLyLopHoc.vue"),
+    meta: { layout: "blank" }
+  },
+
+  // Học viên
+  {
+    path: "/hoc-vien/lich-hoc",
+    name: "hoc-vien-lich-hoc",
+    component: () => import("../components/EduLink/LichHocHocVien.vue"),
+    meta: { layout: "blank" }
+  },
+  {
+    path: "/hoc-vien/lop-cua-toi",
+    name: "hoc-vien-lop-cua-toi",
+    component: () => import("../components/EduLink/LopCuaToi.vue"),
+    meta: { layout: "blank" }
+  },
+
+  // Public (khám phá lớp học)
+  {
+    path: "/client/danh-sach-lop",
+    name: "client-danh-sach-lop",
+    component: () => import("../components/EduLink/DanhSachLopPublic.vue"),
+    meta: { layout: "blank" }
   }
 ];
 
