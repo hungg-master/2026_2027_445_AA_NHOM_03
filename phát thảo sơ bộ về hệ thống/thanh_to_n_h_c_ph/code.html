@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EduLink - Tuition Payment and Billing</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary-fixed-dim": "#adc7ff",
+                      "surface-container-low": "#f1f4fa",
+                      "on-secondary": "#ffffff",
+                      "on-primary-fixed-variant": "#004493",
+                      "surface-dim": "#d7dae0",
+                      "outline-variant": "#c1c6d6",
+                      "error-container": "#ffdad6",
+                      "on-background": "#181c20",
+                      "surface-container-highest": "#dfe3e8",
+                      "on-tertiary-container": "#0e0200",
+                      "inverse-primary": "#adc7ff",
+                      "background": "#f7f9ff",
+                      "surface-bright": "#f7f9ff",
+                      "on-error-container": "#93000a",
+                      "on-secondary-fixed-variant": "#005320",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-container": "#ebeef4",
+                      "on-surface": "#181c20",
+                      "on-error": "#ffffff",
+                      "primary-fixed": "#d8e2ff",
+                      "on-surface-variant": "#414754",
+                      "secondary-fixed-dim": "#6ddd81",
+                      "on-secondary-fixed": "#002108",
+                      "on-primary-fixed": "#001a41",
+                      "surface-container-high": "#e5e8ee",
+                      "surface": "#f7f9ff",
+                      "on-tertiary-fixed-variant": "#783100",
+                      "tertiary": "#9e4300",
+                      "tertiary-fixed": "#ffdbcb",
+                      "primary": "#005bbf",
+                      "inverse-surface": "#2d3135",
+                      "secondary": "#006e2c",
+                      "secondary-container": "#86f898",
+                      "surface-variant": "#dfe3e8",
+                      "on-tertiary": "#ffffff",
+                      "on-primary-container": "#ffffff",
+                      "tertiary-container": "#c55500",
+                      "on-secondary-container": "#00722f",
+                      "outline": "#727785",
+                      "tertiary-fixed-dim": "#ffb691",
+                      "surface-tint": "#005bc0",
+                      "inverse-on-surface": "#eef1f7",
+                      "on-primary": "#ffffff",
+                      "on-tertiary-fixed": "#341100",
+                      "secondary-fixed": "#89fa9b",
+                      "primary-container": "#1a73e8",
+                      "error": "#ba1a1a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "container-max": "1280px",
+                      "gutter": "24px",
+                      "margin-mobile": "16px",
+                      "margin-desktop": "40px",
+                      "unit": "8px"
+              },
+              "fontFamily": {
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "headline-lg-mobile": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "headline-sm": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "label-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased min-h-screen flex flex-col">
+<!-- Top Navigation Bar -->
+<header class="bg-surface dark:bg-surface-container shadow-sm dark:shadow-none docked full-width top-0 z-50">
+<div class="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop py-4 max-w-container-max mx-auto">
+<div class="flex items-center gap-gutter">
+<div class="text-headline-md font-headline-md font-bold text-primary dark:text-primary-fixed-dim">
+                    EduLink
+                </div>
+</div>
+<nav class="hidden md:flex gap-gutter">
+<a class="text-on-surface-variant dark:text-outline-variant font-medium hover:text-primary dark:hover:text-primary-fixed-dim transition-colors duration-200" href="#">Search for tutors</a>
+<a class="text-on-surface-variant dark:text-outline-variant font-medium hover:text-primary dark:hover:text-primary-fixed-dim transition-colors duration-200" href="#">My Schedule</a>
+<a class="text-on-surface-variant dark:text-outline-variant font-medium hover:text-primary dark:hover:text-primary-fixed-dim transition-colors duration-200" href="#">My Classes</a>
+<a class="text-primary dark:text-primary-fixed-dim font-bold border-b-2 border-primary dark:border-primary-fixed-dim pb-1 active:opacity-80 active:scale-95 transition-all" href="#">Billing</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="text-primary dark:text-primary-fixed-dim hover:bg-surface-container-high p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container">
+<img alt="Student Profile Avatar" class="w-full h-full object-cover" data-alt="A small, circular avatar portrait of a modern student in an educational setting. The lighting is soft and natural, emphasizing approachability and professionalism. The background is slightly blurred with subtle hints of a library or bright classroom to fit the EduLink brand." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBlb_xgZyGcAHYtCyN5l3oqEIm7QU8bsuzVkYsu-HLLU-1vlpqD8PYuRJiz-xQCWuWPCOt931_HHHqdww0Dphau2i8tAx1rON3DIGAZd9nWSjviDO9SvbbSX2G8f9M8YaxPpHHrI-KhoQEXWSX6dPQaGys3J4t-0jLzueeguJU8uy6Vtl-8omNULU1MApXsvWBELOSuf5GrqfwBRT3uLSCV0jnuWQ7KlgrquKmh90JYs3yQYj1WxwC3Kg"/>
+</div>
+<button class="hidden md:block text-label-md font-label-md text-on-surface-variant hover:text-primary transition-colors">Logout</button>
+</div>
+</div>
+</header>
+<main class="flex-grow w-full max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-12 md:py-16">
+<div class="mb-10">
+<h1 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-background mb-2">Tuition &amp; Billing</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Manage your payments, view invoices, and track your educational investments.</p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Left Column: Unpaid & Payment Flow -->
+<div class="lg:col-span-2 space-y-8">
+<!-- Unpaid Courses Summary -->
+<section class="bg-surface-container-lowest rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] border border-surface-container p-6 md:p-8 relative overflow-hidden">
+<div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-full -mr-8 -mt-8 pointer-events-none"></div>
+<h2 class="font-headline-sm text-headline-sm text-on-background mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">receipt_long</span>
+                        Current Outstanding Balance
+                    </h2>
+<div class="space-y-4 mb-8">
+<!-- Course Item 1 -->
+<div class="flex justify-between items-start border-b border-surface-container pb-4">
+<div>
+<h3 class="font-label-md text-label-md text-on-surface mb-1">Advanced Mathematics 301</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Prof. Eleanor Rigby • Fall Semester</p>
+</div>
+<div class="text-right">
+<span class="font-label-md text-label-md text-on-background">$450.00</span>
+</div>
+</div>
+<!-- Course Item 2 -->
+<div class="flex justify-between items-start border-b border-surface-container pb-4">
+<div>
+<h3 class="font-label-md text-label-md text-on-surface mb-1">Introduction to Computer Science</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Dr. Alan Turing • Fall Semester</p>
+</div>
+<div class="text-right">
+<span class="font-label-md text-label-md text-on-background">$600.00</span>
+</div>
+</div>
+<!-- Fees -->
+<div class="flex justify-between items-start border-b border-surface-container pb-4">
+<div>
+<h3 class="font-label-md text-label-md text-on-surface mb-1">Technology &amp; Resource Fee</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Standard Semester Fee</p>
+</div>
+<div class="text-right">
+<span class="font-label-md text-label-md text-on-background">$75.00</span>
+</div>
+</div>
+</div>
+<div class="flex justify-between items-end bg-surface-container-low p-4 rounded-lg">
+<div>
+<span class="block font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Total Due</span>
+<span class="block font-headline-md text-headline-md font-bold text-on-background">$1,125.00</span>
+</div>
+<p class="font-body-sm text-body-sm text-error hidden md:block">Due by October 15, 2024</p>
+</div>
+</section>
+<!-- Payment Options -->
+<section class="bg-surface-container-lowest rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] border border-surface-container p-6 md:p-8" id="payment-section">
+<h2 class="font-headline-sm text-headline-sm text-on-background mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">payment</span>
+                        Payment Method
+                    </h2>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+<label class="relative flex cursor-pointer rounded-lg border bg-white p-4 shadow-sm focus:outline-none border-primary ring-1 ring-primary">
+<input checked="" class="sr-only" name="payment_method" type="radio" value="credit_card"/>
+<span class="flex flex-1">
+<span class="flex flex-col">
+<span class="block font-label-md text-label-md text-on-surface flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-primary text-[20px]">credit_card</span> Credit Card
+                                    </span>
+<span class="mt-1 flex items-center font-body-sm text-body-sm text-on-surface-variant">Visa, Mastercard, Amex</span>
+</span>
+</span>
+<span aria-hidden="true" class="material-symbols-outlined text-primary fill-icon">check_circle</span>
+</label>
+<label class="relative flex cursor-pointer rounded-lg border border-surface-variant bg-white p-4 shadow-sm focus:outline-none hover:border-primary-fixed-dim transition-colors">
+<input class="sr-only" name="payment_method" type="radio" value="ewallet"/>
+<span class="flex flex-1">
+<span class="flex flex-col">
+<span class="block font-label-md text-label-md text-on-surface flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">account_balance_wallet</span> E-Wallet
+                                    </span>
+<span class="mt-1 flex items-center font-body-sm text-body-sm text-on-surface-variant">PayPal, Apple Pay</span>
+</span>
+</span>
+<span aria-hidden="true" class="material-symbols-outlined text-transparent">check_circle</span>
+</label>
+</div>
+<!-- Mock Credit Card Form -->
+<form class="space-y-4" id="payment-form">
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="name">Name on Card</label>
+<input class="block w-full h-12 rounded-md border-surface-variant shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-4" id="name" name="name" placeholder="Jane Doe" type="text"/>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="card">Card Number</label>
+<div class="relative">
+<input class="block w-full h-12 rounded-md border-surface-variant shadow-sm focus:border-primary focus:ring-primary sm:text-sm pl-4 pr-10" id="card" name="card" placeholder="0000 0000 0000 0000" type="text"/>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+<span class="material-symbols-outlined text-outline">credit_card</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="expiry">Expiry Date</label>
+<input class="block w-full h-12 rounded-md border-surface-variant shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-4" id="expiry" name="expiry" placeholder="MM/YY" type="text"/>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1" for="cvv">CVV</label>
+<input class="block w-full h-12 rounded-md border-surface-variant shadow-sm focus:border-primary focus:ring-primary sm:text-sm px-4" id="cvv" name="cvv" placeholder="123" type="text"/>
+</div>
+</div>
+<div class="pt-6 border-t border-surface-container mt-6">
+<button class="w-full bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md py-3 px-4 rounded-lg shadow-sm transition-colors duration-200 flex justify-center items-center gap-2" onclick="simulatePayment()" type="button">
+<span class="material-symbols-outlined text-[20px]">lock</span>
+                                Pay $1,125.00 Now
+                            </button>
+<p class="text-center font-body-sm text-body-sm text-on-surface-variant mt-4">
+                                A receipt will be sent to your registered email upon successful payment.
+                            </p>
+</div>
+</form>
+<!-- Success State (Hidden initially) -->
+<div class="hidden flex-col items-center justify-center py-8 text-center" id="success-state">
+<div class="w-16 h-16 bg-secondary-container rounded-full flex items-center justify-center mb-4">
+<span class="material-symbols-outlined text-on-secondary-container text-3xl">check</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-background mb-2">Payment Successful!</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant max-w-md mx-auto mb-6">
+                            Thank you for your payment of $1,125.00. Your balance is now clear. A receipt and confirmation notifications have been sent to your email.
+                        </p>
+<button class="text-primary font-label-md text-label-md border border-primary rounded-lg py-2 px-4 hover:bg-primary/5 transition-colors" onclick="resetPayment()">
+                            Return to Billing
+                        </button>
+</div>
+</section>
+</div>
+<!-- Right Column: History & Information -->
+<div class="space-y-8">
+<!-- Payment History -->
+<section class="bg-surface-container-lowest rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] border border-surface-container p-6">
+<h2 class="font-headline-sm text-headline-sm text-on-background mb-6">Payment History</h2>
+<div class="space-y-4">
+<!-- History Item 1 -->
+<div class="flex gap-4 p-3 rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-secondary text-[20px]">task_alt</span>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start mb-1">
+<span class="font-label-md text-label-md text-on-surface">Spring Semester</span>
+<span class="font-label-md text-label-md text-on-surface">$950.00</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Feb 12, 2024</span>
+<a class="text-primary text-[12px] hover:underline flex items-center" href="#">PDF <span class="material-symbols-outlined text-[14px] ml-1">download</span></a>
+</div>
+</div>
+</div>
+<!-- History Item 2 -->
+<div class="flex gap-4 p-3 rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-secondary text-[20px]">task_alt</span>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start mb-1">
+<span class="font-label-md text-label-md text-on-surface">Registration Fee</span>
+<span class="font-label-md text-label-md text-on-surface">$50.00</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Jan 05, 2024</span>
+<a class="text-primary text-[12px] hover:underline flex items-center" href="#">PDF <span class="material-symbols-outlined text-[14px] ml-1">download</span></a>
+</div>
+</div>
+</div>
+<!-- History Item 3 -->
+<div class="flex gap-4 p-3 rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-secondary text-[20px]">task_alt</span>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start mb-1">
+<span class="font-label-md text-label-md text-on-surface">Fall Semester '23</span>
+<span class="font-label-md text-label-md text-on-surface">$1,050.00</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Sep 10, 2023</span>
+<a class="text-primary text-[12px] hover:underline flex items-center" href="#">PDF <span class="material-symbols-outlined text-[14px] ml-1">download</span></a>
+</div>
+</div>
+</div>
+</div>
+<button class="w-full mt-4 py-2 text-center text-primary font-label-sm text-label-sm hover:bg-primary/5 rounded transition-colors">
+                        View All History
+                    </button>
+</section>
+<!-- Help Card -->
+<section class="bg-primary/5 rounded-xl border border-primary/10 p-6">
+<h3 class="font-label-md text-label-md text-on-surface mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">help</span>
+                        Need Help?
+                    </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-4">
+                        If you have questions about your bill, financial aid, or payment plans, our financial services office is here to assist you.
+                    </p>
+<a class="inline-flex items-center gap-1 text-primary font-label-md text-label-md hover:underline" href="#">
+                        Contact Financial Services <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</a>
+</section>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container-lowest dark:bg-inverse-surface border-t border-outline-variant dark:border-outline mt-auto w-full rounded-none">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter px-margin-mobile md:px-margin-desktop py-12 max-w-container-max mx-auto">
+<div>
+<div class="font-headline-sm text-headline-sm font-bold text-on-surface dark:text-inverse-on-surface mb-4">EduLink</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant dark:text-outline-variant mb-4">© 2024 EduLink. Bridging the gap between educators and students.</p>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-primary dark:text-primary-fixed-dim mb-4">Platform</h4>
+<ul class="space-y-2">
+<li><a class="font-body-sm text-body-sm text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors" href="#">Search for tutors</a></li>
+<li><a class="font-body-sm text-body-sm text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors" href="#">My Schedule</a></li>
+</ul>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-primary dark:text-primary-fixed-dim mb-4">Support</h4>
+<ul class="space-y-2">
+<li><a class="font-body-sm text-body-sm text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors" href="#">FAQ</a></li>
+<li><a class="font-body-sm text-body-sm text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors" href="#">Contact info</a></li>
+</ul>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-primary dark:text-primary-fixed-dim mb-4">Legal</h4>
+<ul class="space-y-2">
+<li><a class="font-body-sm text-body-sm text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors" href="#">Terms</a></li>
+<li><a class="font-body-sm text-body-sm text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed-dim transition-colors" href="#">Privacy Policy</a></li>
+</ul>
+</div>
+</div>
+</footer>
+<script>
+        // Simple UI interaction logic
+        document.querySelectorAll('input[name="payment_method"]').forEach((elem) => {
+            elem.addEventListener("change", function(event) {
+                // Reset all borders and icons
+                document.querySelectorAll('label:has(input[name="payment_method"])').forEach(label => {
+                    label.classList.remove('border-primary', 'ring-1', 'ring-primary');
+                    label.classList.add('border-surface-variant');
+                    const icon = label.querySelector('.material-symbols-outlined:last-child');
+                    if(icon) {
+                        icon.classList.remove('text-primary', 'fill-icon');
+                        icon.classList.add('text-transparent');
+                    }
+                });
+
+                // Set active styles
+                const activeLabel = event.target.closest('label');
+                activeLabel.classList.remove('border-surface-variant');
+                activeLabel.classList.add('border-primary', 'ring-1', 'ring-primary');
+                const activeIcon = activeLabel.querySelector('.material-symbols-outlined:last-child');
+                if(activeIcon) {
+                    activeIcon.classList.remove('text-transparent');
+                    activeIcon.classList.add('text-primary', 'fill-icon');
+                }
+            });
+        });
+
+        function simulatePayment() {
+            const form = document.getElementById('payment-form');
+            const btn = form.querySelector('button');
+            const originalText = btn.innerHTML;
+            
+            // Loading state
+            btn.innerHTML = `<span class="material-symbols-outlined animate-spin">refresh</span> Processing...`;
+            btn.disabled = true;
+            btn.classList.add('opacity-80');
+
+            // Simulate API call
+            setTimeout(() => {
+                form.classList.add('hidden');
+                document.querySelector('#payment-section > h2').classList.add('hidden');
+                document.querySelector('#payment-section > div.grid').classList.add('hidden');
+                document.getElementById('success-state').classList.remove('hidden');
+                document.getElementById('success-state').classList.add('flex');
+                
+                // Reset button for next time
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                btn.classList.remove('opacity-80');
+            }, 1500);
+        }
+
+        function resetPayment() {
+            document.getElementById('success-state').classList.add('hidden');
+            document.getElementById('success-state').classList.remove('flex');
+            
+            const form = document.getElementById('payment-form');
+            form.classList.remove('hidden');
+            form.reset(); // clear form inputs
+            
+            document.querySelector('#payment-section > h2').classList.remove('hidden');
+            document.querySelector('#payment-section > div.grid').classList.remove('hidden');
+        }
+    </script>
+</body></html>
