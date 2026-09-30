@@ -11,7 +11,7 @@ class HocVienMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $user = Auth::guard('hoc_vien')->user() ?: Auth::guard('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         if ($user && $user instanceof \App\Models\HocVien) {
             if ($user->is_block == 1) {
                 return response()->json([

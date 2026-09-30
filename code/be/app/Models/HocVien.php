@@ -28,6 +28,7 @@ class HocVien extends Authenticatable
     ];
 
     protected $hidden = [
+        'face_id_photo_path',
         'password',
         'remember_token',
     ];

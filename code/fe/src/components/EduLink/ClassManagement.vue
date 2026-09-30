@@ -31,7 +31,7 @@
           </div>
 
           <!-- Logout Link -->
-          <router-link to="/dang-ky" class="logout-link">Logout</router-link>
+          <router-link to="/logout" class="logout-link">Logout</router-link>
         </div>
       </div>
     </header>

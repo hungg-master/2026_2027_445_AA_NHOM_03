@@ -383,7 +383,7 @@ export default {
       });
     },
     handleConfirmPayment() {
-      alert("Hệ thống đang kiểm tra giao dịch chuyển khoản cho học viên Nguyễn Linh Lan (EDU-202488). Hóa đơn e-Invoice sẽ được gửi vào email sau khi đối soát thành công!");
+      alert("Thanh toán trực tuyến chưa được hỗ trợ. Thông tin trên trang là dữ liệu minh họa; vui lòng chưa chuyển khoản theo thông tin này.");
     },
     handleChatSupport() {
       alert("Đang kết nối tới chuyên viên tư vấn Phòng Tài vụ EduLink...");
