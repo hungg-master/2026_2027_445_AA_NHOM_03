@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Route;
 // 1. API ADMIN
 // =========================================================================
 Route::post('admin/login', [AdminController::class, 'loginAdmin']);
-Route::get('admin/tao-admin-mac-dinh', [AdminController::class, 'taoAdminMacDinh']);
 
 Route::group(['prefix' => 'admin', 'middleware' => 'AdminMiddleware'], function () {
     Route::post('logout', [AdminController::class, 'logoutAdmin']);
@@ -51,6 +50,7 @@ Route::group(['prefix' => 'giao-vien', 'middleware' => 'GiaoVienMiddleware'], fu
     Route::get('check-token', [GiaoVienController::class, 'checkToken']);
     Route::get('profile/data', [GiaoVienController::class, 'getProfile']);
     Route::post('profile/update', [GiaoVienController::class, 'updateProfile']);
+    Route::post('profile/face-id', [\App\Http\Controllers\FaceIdPhotoController::class, 'store']);
     Route::post('profile/change-password', [GiaoVienController::class, 'changePassword']);
 
     // Lịch dạy + Quản lý lớp học (MỚI)
@@ -61,6 +61,10 @@ Route::group(['prefix' => 'giao-vien', 'middleware' => 'GiaoVienMiddleware'], fu
     Route::put('lop-hoc/{id}', [LopHocController::class, 'update']);
     Route::delete('lop-hoc/{id}', [LopHocController::class, 'destroy']);
     Route::post('lop-hoc/{id}/duyet-hoc-vien', [DuyetHocVienController::class, 'duyet']);
+
+    // Lịch rảnh & Lớp học
+    Route::get('thoi-gian-ranh', [\App\Http\Controllers\ThoiGianRanhController::class, 'getGiaoVienSchedule']);
+    Route::post('thoi-gian-ranh', [\App\Http\Controllers\ThoiGianRanhController::class, 'updateGiaoVienSchedule']);
 });
 
 // =========================================================================
@@ -75,6 +79,7 @@ Route::group(['prefix' => 'hoc-vien', 'middleware' => 'HocVienMiddleware'], func
     Route::get('check-token', [HocVienController::class, 'checkToken']);
     Route::get('profile/data', [HocVienController::class, 'getProfile']);
     Route::post('profile/update', [HocVienController::class, 'updateProfile']);
+    Route::post('profile/face-id', [\App\Http\Controllers\FaceIdPhotoController::class, 'store']);
     Route::post('profile/change-password', [HocVienController::class, 'changePassword']);
 
     // Lịch học + Lớp của tôi (MỚI)
@@ -82,6 +87,10 @@ Route::group(['prefix' => 'hoc-vien', 'middleware' => 'HocVienMiddleware'], func
     Route::get('lop-hoc-cua-toi', [LichHocController::class, 'lopHocCuaToi']);
     Route::post('dang-ky-lop-hoc', [LichHocController::class, 'dangKy']);
     Route::delete('huy-dang-ky/{id}', [LichHocController::class, 'huyDangKy']);
+
+    // Lịch rảnh
+    Route::get('thoi-gian-ranh', [\App\Http\Controllers\ThoiGianRanhController::class, 'getHocVienSchedule']);
+    Route::post('thoi-gian-ranh', [\App\Http\Controllers\ThoiGianRanhController::class, 'updateHocVienSchedule']);
 });
 
 // =========================================================================
@@ -95,3 +104,14 @@ Route::get('client/lop-hoc/data', [LopHocPublicController::class, 'index']);
 Route::get('client/lop-hoc/{id}', [LopHocPublicController::class, 'show']);
 Route::get('client/mon-hoc', [LopHocPublicController::class, 'monHoc']);
 Route::get('client/phong-hoc', [LopHocPublicController::class, 'phongHoc']);
+
+// =========================================================================
+// 5. ĐÓNG GÓP Ý KIẾN (PUBLIC - không cần đăng nhập)
+// =========================================================================
+Route::post('dong-gop-y-kien', [\App\Http\Controllers\DongGopYKienController::class, 'store']);
+Route::post('hoc-thu', [\App\Http\Controllers\TrialBookingController::class, 'store'])->middleware('throttle:10,1');
+
+// Xem danh sách phản hồi (Admin only)
+Route::group(['prefix' => 'admin', 'middleware' => 'AdminMiddleware'], function () {
+    Route::get('dong-gop-y-kien', [\App\Http\Controllers\DongGopYKienController::class, 'index']);
+});

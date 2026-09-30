@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="student-profile-page">
     <div class="profile-container">
       <!-- 1. BREADCRUMB & ROLE SWITCHER -->
@@ -36,7 +36,7 @@
                 alt="Nguyễn Linh Lan"
                 class="student-avatar-img"
               />
-              <div class="faceid-verified-icon" title="Đã xác thực Face ID sinh trắc học">
+              <div class="faceid-verified-icon" title="Chưa xác thực danh tính">
                 <i class="fa-solid fa-shield-halved"></i>
               </div>
             </div>
@@ -45,7 +45,7 @@
               <div class="student-name-row">
                 <h1 class="student-name">Nguyễn Linh Lan</h1>
                 <span class="badge-faceid-verified">
-                  <span class="green-dot me-1"></span> Đã xác thực Face ID sinh trắc học
+                  <span class="me-1"></span> Chưa xác thực danh tính
                 </span>
               </div>
 
@@ -67,9 +67,9 @@
             <button class="btn btn-action-outline" @click="handleEditProfile">
               <i class="fa-regular fa-pen-to-square me-1"></i> Chỉnh sửa thông tin
             </button>
-            <router-link to="/face-id" class="btn btn-action-outline">
+            <button class="btn btn-action-outline" @click="scrollToFaceId">
               <i class="fa-solid fa-rotate me-1"></i> Cập nhật Face ID
-            </router-link>
+            </button>
             <button class="btn btn-primary btn-download-report" @click="handleDownloadReport">
               <i class="fa-solid fa-download me-1"></i> Tải bảng điểm học tập
             </button>
@@ -270,9 +270,6 @@
                     <button class="btn btn-outline-secondary btn-class-details" @click="openClassDetails('Toán 301')">
                       Chi tiết buổi học
                     </button>
-                    <router-link to="/face-id" class="btn btn-primary btn-enter-faceid">
-                      <i class="fa-solid fa-arrow-right-to-bracket me-1"></i> Vào phòng học (Face ID)
-                    </router-link>
                   </div>
                 </div>
               </div>
@@ -451,43 +448,55 @@
 
         <!-- CỘT PHẢI: FACE ID, HỌC PHÍ & PHỤ HUYNH -->
         <aside class="profile-right-column">
-          <!-- CARD 1: SINH TRẮC HỌC FACE ID -->
-          <div class="content-card">
+          <!-- CARD 1: CAP NHAT FACE ID -->
+          <div class="content-card" id="face-id-section" ref="faceIdSection">
             <div class="card-header-flex mb-3">
               <div class="d-flex align-items-center gap-2">
                 <div class="card-title-icon text-success">
                   <i class="fa-solid fa-fingerprint"></i>
                 </div>
-                <h3 class="card-title fs-6 mb-0">Sinh trắc học Face ID</h3>
+                <div>
+                  <h3 class="card-title fs-6 mb-0">Cập nhật ảnh Face ID</h3>
+                  <div class="card-sub-label">Lưu ảnh để chuẩn bị xác thực danh tính</div>
+                </div>
               </div>
             </div>
 
-            <!-- Khung hiển thị kích hoạt Face ID -->
-            <div class="faceid-status-box">
-              <div class="faceid-icon-circle">
-                <i class="fa-solid fa-face-smile"></i>
+            <div class="faceid-current-photo-wrap">
+              <img
+                :src="faceIdPreview || 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=240&q=80'"
+                alt="Anh Face ID"
+                class="faceid-current-img"
+              />
+              <div class="faceid-verified-badge">
+                <i class="fa-solid fa-circle-info me-1"></i> Chưa xác thực
               </div>
-              <div class="faceid-status-title">Đã kích hoạt & Sẵn sàng</div>
-              <div class="faceid-match-rate">Độ khớp mẫu khuôn mặt: <strong>98.4%</strong></div>
-              <p class="faceid-desc">
-                Học sinh quét khuôn mặt trước khi vào lớp online để điểm danh tự động và bảo mật buổi học.
+            </div>
+
+            <div class="faceid-upload-area mt-3" @click="triggerFileInput" @dragover.prevent @drop.prevent="handleDrop">
+              <input
+                ref="faceIdFileInput"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                style="display:none"
+                @change="handleFaceIdFileChange"
+              />
+              <i class="fa-solid fa-cloud-arrow-up faceid-upload-icon"></i>
+              <p class="faceid-upload-text">
+                Kéo thả hoặc <span class="text-primary fw-bold">chọn ảnh</span>
               </p>
-              <router-link to="/face-id" class="btn btn-outline-secondary btn-rescan-face w-100">
-                <i class="fa-solid fa-rotate me-1"></i> Quét lại khuôn mặt mẫu
-              </router-link>
+              <p class="faceid-upload-hint">JPG, PNG, WEBP tối đa 5MB</p>
             </div>
 
-            <!-- Thông số thiết bị -->
-            <div class="device-specs-list mt-3">
-              <div class="spec-row">
-                <span class="spec-label"><i class="fa-solid fa-laptop me-2 text-secondary"></i> Thiết bị chính:</span>
-                <span class="spec-val fw-bold">MacBook Air M2 (macOS 14)</span>
-              </div>
-              <div class="spec-row mt-2">
-                <span class="spec-label"><i class="fa-solid fa-video me-2 text-secondary"></i> Camera HD:</span>
-                <span class="spec-val text-success fw-bold">Hoạt động tốt (1080p)</span>
-              </div>
+            <div v-if="faceIdMessage" :class="['alert','mt-2','py-2','px-3', faceIdSuccess ? 'alert-success' : 'alert-danger']" style="font-size:13px;">
+              {{ faceIdMessage }}
             </div>
+
+            <button class="btn btn-primary w-100 mt-3" :disabled="!faceIdFile || faceIdUploading" @click="saveFaceId">
+              <span v-if="faceIdUploading" class="spinner-border spinner-border-sm me-2"></span>
+              <i v-else class="fa-solid fa-floppy-disk me-1"></i>
+              Lưu ảnh Face ID
+            </button>
           </div>
 
           <!-- CARD 2: TÌNH TRẠNG HỌC PHÍ -->
@@ -583,17 +592,93 @@
 </template>
 
 <script>
+import { API_BASE } from '../../services/api';
 export default {
   name: "SmartTrialStudentProfile",
+  data() {
+    return {
+      faceIdFile: null,
+      faceIdPreview: null,
+      faceIdUploading: false,
+      faceIdMessage: "",
+      faceIdSuccess: false
+    };
+  },
   methods: {
     handleEditProfile() {
-      alert("Đang mở biểu mẫu chỉnh sửa thông tin học viên Nguyễn Linh Lan...");
+      alert("Dang mo bieu mau chinh sua thong tin hoc vien...");
     },
     handleDownloadReport() {
-      alert("Đang xuất file Bảng điểm học tập & Đánh giá chuyên cần kỳ II (PDF)...");
+      alert("Dang xuat file Bang diem hoc tap PDF...");
     },
     openClassDetails(className) {
-      alert(`Đang mở chi tiết buổi học của lớp: "${className}"`);
+      alert("Dang mo chi tiet buoi hoc cua lop: " + className);
+    },
+    scrollToFaceId() {
+      var el = this.$refs.faceIdSection || document.getElementById("face-id-section");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.style.boxShadow = "0 0 0 3px #0060d2";
+        setTimeout(function() { el.style.boxShadow = ""; }, 2000);
+      }
+    },
+    triggerFileInput() {
+      this.$refs.faceIdFileInput.click();
+    },
+    handleFaceIdFileChange(event) {
+      this.selectFaceIdFile(event.target.files[0]);
+    },
+    selectFaceIdFile(file) {
+      if (!file) return;
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+        this.faceIdFile = null;
+        this.faceIdPreview = null;
+        this.faceIdMessage = "Vui lòng chọn ảnh JPG, PNG hoặc WEBP tối đa 5MB.";
+        this.faceIdSuccess = false;
+        return;
+      }
+      this.faceIdFile = file;
+      this.faceIdMessage = "";
+      var reader = new FileReader();
+      var vm = this;
+      reader.onload = function(e) { vm.faceIdPreview = e.target.result; };
+      reader.readAsDataURL(file);
+    },
+    handleDrop(event) {
+      this.selectFaceIdFile(event.dataTransfer.files[0]);
+    },
+    async saveFaceId() {
+      if (!this.faceIdFile) return;
+      this.faceIdUploading = true;
+      this.faceIdMessage = "";
+      try {
+        var formData = new FormData();
+        formData.append("face_id_photo", this.faceIdFile);
+        var token = localStorage.getItem("token");
+        var role = localStorage.getItem("role") || "hoc_vien";
+        var endpoint = role === "giao_vien"
+          ? `${API_BASE}/giao-vien/profile/face-id`
+          : `${API_BASE}/hoc-vien/profile/face-id`;
+        var res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Authorization": "Bearer " + token, "Accept": "application/json" },
+          body: formData
+        });
+        var data = await res.json();
+        if (data.status) {
+          this.faceIdSuccess = true;
+          this.faceIdMessage = data.message;
+          this.faceIdFile = null;
+        } else {
+          this.faceIdSuccess = false;
+          this.faceIdMessage = Object.values(data.errors || {}).flat()[0] || data.message || "Cập nhật thất bại.";
+        }
+      } catch (err) {
+        this.faceIdSuccess = false;
+        this.faceIdMessage = "Không thể kết nối đến máy chủ.";
+      } finally {
+        this.faceIdUploading = false;
+      }
     }
   }
 };
@@ -1547,5 +1632,83 @@ export default {
   .week-free-slots-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+/* ===== FACE ID UPLOAD SECTION ===== */
+.faceid-current-photo-wrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.faceid-current-img {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #e2e8f0;
+}
+
+.faceid-verified-badge {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #dcfce7;
+  color: #16a34a;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 50px;
+  white-space: nowrap;
+}
+
+.faceid-pending-badge {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff7ed;
+  color: #ea580c;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 50px;
+  white-space: nowrap;
+}
+
+.faceid-upload-area {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 20px 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  background: #f8fafc;
+}
+
+.faceid-upload-area:hover {
+  border-color: #0060d2;
+  background: #eff6ff;
+}
+
+.faceid-upload-icon {
+  font-size: 28px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.faceid-upload-text {
+  font-size: 13px;
+  color: #475569;
+  margin-bottom: 2px;
+}
+
+.faceid-upload-hint {
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin-bottom: 0;
 }
 </style>

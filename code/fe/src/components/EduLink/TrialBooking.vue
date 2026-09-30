@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="edulink-page">
     <!-- 1. HEADER / NAVBAR -->
     <header class="edulink-header">
@@ -41,9 +41,9 @@
       <div class="content-container">
         <!-- Title & Subtitle -->
         <div class="page-title-area">
-          <h1 class="page-title">Select Your Free Time</h1>
+          <h1 class="page-title">Đăng ký Lịch rảnh Học thử</h1>
           <p class="page-subtitle">
-            Click on the slots below to indicate your availability. We'll find the best tutors for you.
+            Chọn lịch rảnh và gửi yêu cầu học thử. Lịch học sẽ được xác nhận sau khi tiếp nhận.
           </p>
         </div>
 
@@ -54,16 +54,7 @@
             <div class="schedule-card">
               <!-- Header của Card: Tuần & Chú thích (Legend) -->
               <div class="schedule-card-header">
-                <!-- Điều hướng tuần -->
-                <div class="week-nav">
-                  <button class="nav-arrow-btn" @click="changeWeek(-1)" title="Previous week">
-                    <i class="fa-solid fa-chevron-left"></i>
-                  </button>
-                  <span class="week-range-text">{{ currentWeekText }}</span>
-                  <button class="nav-arrow-btn" @click="changeWeek(1)" title="Next week">
-                    <i class="fa-solid fa-chevron-right"></i>
-                  </button>
-                </div>
+                <div class="week-nav">Lịch rảnh hằng tuần</div>
 
                 <!-- Chú thích trạng thái -->
                 <div class="schedule-legend">
@@ -85,12 +76,12 @@
                     <tr>
                       <th class="time-col-header">Time</th>
                       <th
-                        v-for="day in weekDays"
-                        :key="day.key"
-                        :class="['day-col-header', { 'active-day': day.key === 'Thu' }]"
+                        v-for="(day, index) in days"
+                        :key="day"
+                        :class="['day-col-header', { 'active-day': day === 'Thu' }]"
                       >
-                        <div class="day-name">{{ day.name }}</div>
-                        <div class="day-num">{{ day.date }}</div>
+                        <div class="day-name">{{ dayLabels[index] }}</div>
+                        
                       </th>
                     </tr>
                   </thead>
@@ -101,12 +92,12 @@
 
                       <!-- Các ô chọn giờ theo từng ngày trong tuần -->
                       <td
-                        v-for="day in weekDays"
-                        :key="day.key + '_' + time"
-                        :class="['slot-cell', { 'is-selected': isSlotSelected(day.key, time) }]"
-                        @click="toggleSlot(day.key, time)"
+                        v-for="(day, index) in days"
+                        :key="day + '_' + time"
+                        :class="['slot-cell', { 'is-selected': isSelected(day, time) }]"
+                        @click="toggleSlot(day, time)"
                       >
-                        <span v-if="isSlotSelected(day.key, time)" class="selected-badge">
+                        <span v-if="isSelected(day, time)" class="selected-badge">
                           Selected
                         </span>
                       </td>
@@ -117,54 +108,22 @@
             </div>
           </section>
 
-          <!-- Cột phải: Danh sách gia sư gợi ý (Suggested Tutors) -->
           <aside class="tutors-column">
-            <!-- Header gợi ý & badge đếm số match -->
-            <div class="tutors-header">
-              <div class="d-flex align-items-center justify-content-between">
-                <h3 class="tutors-title">Suggested Tutors</h3>
-                <span class="matches-badge">{{ tutors.length }} Matches</span>
-              </div>
-              <p class="tutors-subtitle">Matches for your selected time</p>
-            </div>
-
-            <!-- Danh sách thẻ gia sư -->
-            <div class="tutors-list">
-              <div v-for="tutor in tutors" :key="tutor.id" class="tutor-card">
-                <!-- Info gia sư: Avatar, Tên, Môn học & Đánh giá -->
-                <div class="tutor-info-row">
-                  <img :src="tutor.avatar" :alt="tutor.name" class="tutor-avatar" />
-                  <div class="tutor-details">
-                    <h4 class="tutor-name">{{ tutor.name }}</h4>
-                    <p class="tutor-subject">{{ tutor.subject }}</p>
-                    <div class="tutor-rating">
-                      <i class="fa-solid fa-star star-icon"></i>
-                      <span class="rating-num">{{ tutor.rating }}</span>
-                      <span class="sessions-count">({{ tutor.sessions }} sessions)</span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Khung giờ khớp -->
-                <div class="tutor-matched-slots">
-                  <span
-                    v-for="(slot, idx) in tutor.matchedSlots"
-                    :key="idx"
-                    class="matched-slot-pill"
-                  >
-                    {{ slot }}
-                  </span>
-                </div>
-
-                <!-- Nút chọn gia sư -->
-                <button
-                  class="btn btn-select-tutor w-100"
-                  @click="handleSelectTutor(tutor)"
-                >
-                  Select Tutor
-                </button>
-              </div>
-            </div>
+            <form class="schedule-card p-4" @submit.prevent="submitTrialBooking">
+              <h2 class="h5">Thông tin học thử</h2>
+              <label class="d-block mt-3">Họ tên
+                <input v-model.trim="form.name" class="form-control" required maxlength="100" />
+              </label>
+              <label class="d-block mt-3">Số điện thoại
+                <input v-model.trim="form.phone" class="form-control" required pattern="[0-9]{10}" inputmode="tel" />
+              </label>
+              <label class="d-block mt-3">Môn học
+                <input v-model.trim="form.subject" class="form-control" required maxlength="150" />
+              </label>
+              <p class="mt-3">Đã chọn {{ selectedSlots.length }} khung giờ.</p>
+              <p v-if="message" role="status">{{ message }}</p>
+              <button class="btn btn-primary w-100" :disabled="loading || !selectedSlots.length">{{ loading ? 'Đang gửi…' : 'Gửi yêu cầu học thử' }}</button>
+            </form>
           </aside>
         </div>
       </div>
@@ -193,84 +152,96 @@
 </template>
 
 <script>
+import { API_BASE } from '../../services/api';
 export default {
-  name: "EduLinkMySchedule",
+  name: "TrialBooking",
   data() {
     return {
-      currentWeekIndex: 0,
-      currentWeekText: "Oct 23 - Oct 29, 2023",
-      weekDays: [
-        { key: "Mon", name: "Mon", date: "23" },
-        { key: "Tue", name: "Tue", date: "24" },
-        { key: "Wed", name: "Wed", date: "25" },
-        { key: "Thu", name: "Thu", date: "26" },
-        { key: "Fri", name: "Fri", date: "27" },
-        { key: "Sat", name: "Sat", date: "28" },
-        { key: "Sun", name: "Sun", date: "29" }
+      days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      dayLabels: ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "CN"],
+      timeSlots: [
+        "7:00 AM", "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM",
+        "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM",
+        "6:00 PM", "7:00 PM", "8:00 PM", "9:00 PM"
       ],
-      timeSlots: ["9:00 AM", "10:00 AM", "11:00 AM"],
-      // Các slot đã được chọn (khớp chính xác với hình ảnh)
-      selectedSlots: [
-        "Wed_9:00 AM",
-        "Sat_9:00 AM",
-        "Tue_10:00 AM",
-        "Thu_11:00 AM"
-      ],
-      // Danh sách gia sư gợi ý
-      tutors: [
-        {
-          id: 1,
-          name: "Sarah Jenkins",
-          subject: "Advanced Calculus, Physics",
-          rating: "4.9",
-          sessions: 120,
-          avatar:
-            "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
-          matchedSlots: ["Wed 9:00 AM", "Thu 11:00 AM"]
-        },
-        {
-          id: 2,
-          name: "David Chen",
-          subject: "Algebra, Geometry, SAT Prep",
-          rating: "4.8",
-          sessions: 85,
-          avatar:
-            "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
-          matchedSlots: ["Tue 10:00 AM", "Sat 9:00 AM"]
-        }
-      ]
+      selectedSlots: [],
+      loading: false,
+      message: "",
+      isDragging: false,
+      dragMode: "select",
+      form: {
+        name: "",
+        phone: "",
+        subject: ""
+      }
     };
   },
+  mounted() {
+    // Get subject from URL query if any
+    if (this.$route.query.subject) {
+      this.form.subject = this.$route.query.subject;
+    } else {
+      this.form.subject = "Học thử Tổng quát";
+    }
+  },
   methods: {
-    // Kiểm tra slot có đang được chọn hay không
-    isSlotSelected(dayKey, time) {
-      const slotKey = `${dayKey}_${time}`;
-      return this.selectedSlots.includes(slotKey);
+    getSlotId(day, time) {
+      return `${day}_${time}`;
     },
-    // Toggle chọn hoặc huỷ chọn khung giờ
-    toggleSlot(dayKey, time) {
-      const slotKey = `${dayKey}_${time}`;
-      const index = this.selectedSlots.indexOf(slotKey);
-      if (index > -1) {
+    isSelected(day, time) {
+      return this.selectedSlots.includes(this.getSlotId(day, time));
+    },
+    toggleSlot(day, time) {
+      const slotId = this.getSlotId(day, time);
+      const index = this.selectedSlots.indexOf(slotId);
+      if (index === -1) {
+        this.selectedSlots.push(slotId);
+      } else {
         this.selectedSlots.splice(index, 1);
-      } else {
-        this.selectedSlots.push(slotKey);
       }
     },
-    // Điều hướng đổi tuần
-    changeWeek(offset) {
-      this.currentWeekIndex += offset;
-      if (this.currentWeekIndex === 0) {
-        this.currentWeekText = "Oct 23 - Oct 29, 2023";
-      } else if (this.currentWeekIndex > 0) {
-        this.currentWeekText = `Oct ${23 + this.currentWeekIndex * 7} - Nov ${5 * this.currentWeekIndex}, 2023`;
+    startDrag(day, time) {
+      this.isDragging = true;
+      const slotId = this.getSlotId(day, time);
+      if (this.selectedSlots.includes(slotId)) {
+        this.dragMode = "deselect";
+        this.selectedSlots = this.selectedSlots.filter((id) => id !== slotId);
       } else {
-        this.currentWeekText = `Oct ${23 + this.currentWeekIndex * 7} - Oct ${29 + this.currentWeekIndex * 7}, 2023`;
+        this.dragMode = "select";
+        this.selectedSlots.push(slotId);
       }
     },
-    // Xử lý khi bấm nút chọn gia sư
-    handleSelectTutor(tutor) {
-      alert(`Bạn đã chọn gia sư ${tutor.name}! Chúng tôi sẽ liên hệ để xác nhận lịch học.`);
+    onDrag(day, time) {
+      if (!this.isDragging) return;
+      const slotId = this.getSlotId(day, time);
+      if (this.dragMode === "select" && !this.selectedSlots.includes(slotId)) {
+        this.selectedSlots.push(slotId);
+      } else if (this.dragMode === "deselect" && this.selectedSlots.includes(slotId)) {
+        this.selectedSlots = this.selectedSlots.filter((id) => id !== slotId);
+      }
+    },
+    stopDrag() {
+      this.isDragging = false;
+    },
+    async submitTrialBooking() {
+      if (this.loading || !this.selectedSlots.length) return;
+      this.loading = true;
+      this.message = '';
+      try {
+        const response = await fetch(API_BASE + '/hoc-thu', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ ...this.form, schedules: this.selectedSlots })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(Object.values(data.errors || {}).flat()[0] || data.message);
+        this.message = data.message;
+        this.selectedSlots = [];
+      } catch (error) {
+        this.message = error.message || 'Không thể gửi yêu cầu. Vui lòng thử lại.';
+      } finally {
+        this.loading = false;
+      }
     }
   }
 };
@@ -802,3 +773,5 @@ export default {
   }
 }
 </style>
+
+

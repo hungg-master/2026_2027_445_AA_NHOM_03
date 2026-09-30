@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="edulink-landing-page">
     <!-- 1. TOP NAVBAR -->
     <header class="main-header">
@@ -12,183 +12,95 @@
         </router-link>
 
         <!-- Navigation Links -->
+        <!-- Navigation Links -->
         <nav class="nav-links">
-          <a href="#tutors" class="nav-item">Tìm gia sư</a>
-          <a href="#subjects" class="nav-item">Môn học</a>
-          <router-link to="/my-schedule" class="nav-item">Lịch rảnh & Ghép lịch</router-link>
-          <router-link to="/face-id" class="nav-item">Tính năng Face ID</router-link>
-          <router-link to="/thanh-toan" class="nav-item">Bảng giá học phí</router-link>
-          <a href="javascript:void(0)" @click="openFeedbackModal" class="nav-item">Đóng góp ý kiến</a>
-          <router-link to="/dang-ky" class="nav-item">Đăng nhập</router-link>
+          <router-link to="/my-schedule" class="nav-item">Lịch rảnh</router-link>
+          <router-link to="/my-classes" class="nav-item">Lớp học</router-link>
+          <a href="#about" class="nav-item">Thông tin của chúng tôi</a>
+          <a href="#news" class="nav-item">Tin tức</a>
+          <a href="javascript:void(0)" @click="openFeedbackModal" class="nav-item">Góp ý</a>
         </nav>
 
         <!-- Header Actions -->
         <div class="header-actions">
-          <button class="btn btn-primary btn-book-trial" @click="openTrialModal('Đăng ký học thử tổng quát')">
-            Đặt lịch học thử
-          </button>
-          <router-link to="/hoc-vien" class="user-avatar-btn" title="Xem hồ sơ cá nhân">
-            <i class="fa-regular fa-user"></i>
+          <router-link v-if="!isLoggedIn" to="/dang-ky" class="btn btn-outline-primary btn-login">
+            Đăng nhập / Đăng ký
           </router-link>
+
+          <div v-else class="user-dropdown-wrapper" style="position: relative;">
+            <button class="user-avatar-btn-circle" @click="toggleUserDropdown">
+              <img :src="userAvatar" alt="Avatar" class="avatar-img-circle" />
+            </button>
+
+            <!-- Dropdown Menu -->
+            <div v-if="showUserDropdown" class="user-dropdown-menu">
+              <div class="dropdown-header">
+                <strong>{{ userName }}</strong>
+                <span class="d-block text-muted" style="font-size:11px">{{ userRole === 'giao_vien' ? 'Giáo viên' : 'Học viên' }}</span>
+              </div>
+              <div class="dropdown-divider"></div>
+              <router-link :to="userRole === 'giao_vien' ? '/ho-so-giang-vien' : '/hoc-vien'" class="dropdown-item">
+                <i class="fa-regular fa-user me-2"></i> Thông tin tài khoản
+              </router-link>
+              <a href="javascript:void(0)" @click="handleChangePassword" class="dropdown-item">
+                <i class="fa-solid fa-key me-2"></i> Đổi mật khẩu
+              </a>
+              <a href="javascript:void(0)" @click="handleUpdateAvatar" class="dropdown-item">
+                <i class="fa-regular fa-image me-2"></i> Cập nhật Avatar
+              </a>
+              <router-link :to="userRole === 'giao_vien' ? '/ho-so-giang-vien' : '/hoc-vien'" class="dropdown-item" @click="showUserDropdown = false">
+                <i class="fa-solid fa-fingerprint me-2 text-success"></i> Cập nhật Face ID
+              </router-link>
+              <div class="dropdown-divider"></div>
+              <a href="javascript:void(0)" @click="logout" class="dropdown-item text-danger">
+                <i class="fa-solid fa-arrow-right-from-bracket me-2"></i> Đăng xuất
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </header>
 
     <!-- 2. HERO SECTION -->
     <section class="hero-section">
+      <div class="hero-bg-overlay"></div>
       <div class="hero-container">
-        <!-- Hero Left Column -->
-        <div class="hero-content-left">
-          <div class="hero-pill-badge">
-            <span class="sparkle-icon">✨</span> Nền tảng kết nối gia sư thông minh hàng đầu
+        <div class="hero-content">
+          <div class="hero-badge">
+            <i class="fa-solid fa-star text-warning me-1"></i> Nền tảng Học tập & Gia sư Tốt nhất 2025
           </div>
-
-          <h1 class="hero-title">
-            Kết nối Gia sư chất lượng cao - Tối ưu lộ trình học với công nghệ <span class="highlight-ai">AI & Face ID</span>
-          </h1>
-
+          <h1 class="hero-title">Khơi dậy Tiềm năng - <br><span class="highlight-text">Kiến tạo Tương lai</span> cùng EduLink</h1>
           <p class="hero-desc">
-            EduLink giúp phụ huynh và học sinh tìm đúng gia sư chuẩn mực, sắp xếp lịch học thông minh theo tuần, tự động điểm danh nâng cao và cam kết tiến bộ rõ rệt qua từng buổi học.
+            Nền tảng kết nối gia sư và học viên thông minh hàng đầu. Tích hợp thuật toán tự động ghép lịch ưu việt và công nghệ xác thực Face ID đảm bảo an toàn tuyệt đối cho mọi buổi học trực tuyến.
           </p>
-
-          <!-- Floating Search & Filter Bar -->
-          <div class="hero-search-card">
-            <div class="search-inputs-grid">
-              <!-- Select Subject & Grade -->
-              <div class="filter-col">
-                <label class="filter-label">Chọn môn học & Lớp</label>
-                <div class="input-with-icon">
-                  <i class="fa-solid fa-book-open select-icon"></i>
-                  <select v-model="searchSubject" class="form-select filter-select">
-                    <option value="Toán học (Lớp 1 - 12)">Toán học (Lớp 1 - 12)</option>
-                    <option value="Tiếng Anh & IELTS">Tiếng Anh & IELTS</option>
-                    <option value="Vật lý & Hóa học">Vật lý & Hóa học</option>
-                    <option value="Lập trình & Tin học">Lập trình & Tin học</option>
-                    <option value="Ngữ văn & Viết luận">Ngữ văn & Viết luận</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Select Location -->
-              <div class="filter-col">
-                <label class="filter-label">Khu vực / Cơ sở</label>
-                <div class="input-with-icon">
-                  <i class="fa-solid fa-location-dot select-icon"></i>
-                  <select v-model="searchLocation" class="form-select filter-select">
-                    <option value="Quận 1 / Trực tuyến">Quận 1 / Trực tuyến</option>
-                    <option value="Toàn quốc (Online Face ID)">Toàn quốc (Online Face ID)</option>
-                    <option value="Quận 10 - Cơ sở trực tiếp">Quận 10 - Cơ sở trực tiếp</option>
-                    <option value="Quận 5 - Cơ sở trực tiếp">Quận 5 - Cơ sở trực tiếp</option>
-                    <option value="Hà Nội & TP.HCM">Hà Nội & TP.HCM</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Select Time Slot -->
-              <div class="filter-col">
-                <label class="filter-label">Khung giờ học</label>
-                <div class="input-with-icon">
-                  <i class="fa-regular fa-clock select-icon"></i>
-                  <select v-model="searchTimeSlot" class="form-select filter-select">
-                    <option value="Tối (18:00 - 21:00)">Tối (18:00 - 21:00)</option>
-                    <option value="Sáng (08:00 - 11:30)">Sáng (08:00 - 11:30)</option>
-                    <option value="Chiều (14:00 - 17:30)">Chiều (14:00 - 17:30)</option>
-                    <option value="Cuối tuần (T7 & CN)">Cuối tuần (T7 & CN)</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Submit Button -->
-              <div class="filter-submit-col">
-                <button class="btn btn-primary btn-search-tutor" @click="handleSearchTutor">
-                  <i class="fa-solid fa-magnifying-glass me-1"></i> Tìm gia sư ngay
-                </button>
-              </div>
-            </div>
-
-            <div class="search-footer-note">
-              <i class="fa-solid fa-star text-warning me-1"></i>
-              Hơn <strong>1,200+</strong> gia sư đã qua kiểm duyệt chuyên môn đang sẵn sàng.
-            </div>
+          <div class="hero-action-buttons">
+            <button class="btn btn-primary btn-lg hero-btn-main" @click="openTrialModal('Học thử Tổng quát')">
+              <i class="fa-solid fa-rocket me-2"></i> Đặt lịch học thử ngay
+            </button>
+            <a href="#tutors" class="btn btn-outline-light btn-lg hero-btn-alt">
+              <i class="fa-solid fa-magnifying-glass me-2"></i> Tìm gia sư phù hợp
+            </a>
           </div>
 
-          <!-- 3 Stats Counter -->
-          <div class="hero-stats-row">
-            <div class="stat-box">
-              <div class="stat-number">10,000+</div>
-              <div class="stat-desc">Gia sư, chuyên gia kiểm duyệt</div>
+          <div class="hero-stats-bar">
+            <div class="h-stat">
+              <h4>10,000+</h4>
+              <p>Gia sư chọn lọc</p>
             </div>
-            <div class="stat-divider"></div>
-            <div class="stat-box">
-              <div class="stat-number">98.2%</div>
-              <div class="stat-desc">Học sinh tăng điểm sau 30 ngày</div>
+            <div class="h-stat-divider"></div>
+            <div class="h-stat">
+              <h4>98%</h4>
+              <p>Học viên tiến bộ</p>
             </div>
-            <div class="stat-divider"></div>
-            <div class="stat-box">
-              <div class="stat-number">4.89 <span class="star-gold">★</span></div>
-              <div class="stat-desc">Từ 28,000+ ý kiến phụ huynh</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Hero Right Column: Interactive Tutor Preview Card -->
-        <div class="hero-content-right">
-          <div class="hero-featured-card-wrap">
-            <!-- Main Teacher Floating Card -->
-            <div class="hero-tutor-card">
-              <div class="tutor-header-row">
-                <img
-                  src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=160&q=80"
-                  alt="TS. Nguyễn Minh Triết"
-                  class="tutor-card-avatar"
-                />
-                <div class="tutor-header-meta">
-                  <div class="tutor-name-line">
-                    <span class="tutor-card-name">TS. Nguyễn Minh Triết</span>
-                    <span class="badge-online-ready">● Sẵn sàng</span>
-                  </div>
-                  <div class="tutor-card-role">Giảng viên ĐH Bách Khoa TP.HCM • 8+ năm kinh nghiệm</div>
-                  <div class="tutor-card-rating">
-                    <i class="fa-solid fa-star text-warning"></i>
-                    <strong class="text-dark ms-1">4.9</strong>
-                    <span class="text-muted">(128 đánh giá)</span>
-                    <span class="meta-dot">•</span>
-                    <span class="text-primary fw-bold">Toán Chuyên & ĐGNL</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Available Slot Row -->
-              <div class="tutor-slot-box mt-3">
-                <div class="slot-left-text">
-                  <i class="fa-regular fa-calendar-check text-primary me-2"></i>
-                  <span>Lịch rảnh khả dụng: <strong>T2, T4, T6 (19:30 - 21:00)</strong></span>
-                </div>
-                <router-link to="/giao-vien" class="btn btn-sm btn-outline-primary btn-view-cal">
-                  Xem lịch
-                </router-link>
-              </div>
-
-              <!-- Verified Certification Bar -->
-              <div class="tutor-cert-row mt-3">
-                <div class="cert-left">
-                  <i class="fa-solid fa-shield-check text-success me-1"></i>
-                  <span>Kiểm định thông tin & Bằng cấp</span>
-                </div>
-                <span class="badge-match-100">100% Khớp</span>
-              </div>
-            </div>
-
-            <!-- Floating Matching Pill -->
-            <div class="floating-match-pill">
-              <div class="pulsing-green-dot"></div>
-              <span>Đang ghép gia sư trong <strong>1 giây</strong></span>
+            <div class="h-stat-divider"></div>
+            <div class="h-stat">
+              <h4>50+</h4>
+              <p>Môn học đa dạng</p>
             </div>
           </div>
         </div>
       </div>
     </section>
-
     <!-- 3. SECTION: TẠI SAO CHỌN EDULINK -->
     <section class="section-features">
       <div class="section-container text-center">
@@ -821,59 +733,109 @@
       </div>
     </footer>
 
-    <!-- MODAL: ĐẶT LỊCH HỌC THỬ NHANH -->
-    <div v-if="showTrialModal" class="custom-modal-backdrop" @click.self="closeTrialModal">
-      <div class="custom-modal-card">
+    <!-- ========== MODAL ĐÓNG GÓP Ý KIẾN ========== -->
+    <div v-if="showFeedbackModal" class="modal-overlay" @click.self="closeFeedbackModal">
+      <div class="modal-card feedback-modal-card">
+        <!-- Header -->
         <div class="modal-card-header">
-          <div class="d-flex align-items-center gap-2">
-            <div class="modal-icon-wrap">
-              <i class="fa-solid fa-calendar-check text-primary"></i>
+          <div class="modal-header-left">
+            <div class="modal-icon-badge bg-purple">
+              <i class="fa-regular fa-comment-dots"></i>
             </div>
             <div>
-              <h3 class="modal-title mb-0">Đăng ký Học thử Miễn phí 100%</h3>
-              <div class="modal-subtitle">EduLink kết nối gia sư phù hợp trong 24 giờ</div>
+              <h4 class="modal-title mb-0">Đóng góp ý kiến</h4>
+              <p class="modal-subtitle mb-0">Ý kiến của bạn giúp EduLink ngày càng tốt hơn</p>
             </div>
           </div>
-          <button class="btn-close-modal" @click="closeTrialModal">&times;</button>
+          <button class="modal-close-btn" @click="closeFeedbackModal">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
         </div>
 
+        <!-- Body -->
         <div class="modal-card-body">
-          <div class="alert alert-info py-2 px-3 fs-8 mb-3">
-            <i class="fa-solid fa-circle-info me-1"></i> Bạn đang quan tâm: <strong>{{ selectedProgram }}</strong>
-          </div>
-
-          <div class="form-group mb-3">
-            <label class="form-label fs-8 fw-bold">Họ và tên học sinh / Phụ huynh:</label>
-            <input type="text" v-model="trialForm.name" class="form-control" placeholder="Ví dụ: Nguyễn Linh Lan" />
-          </div>
-
-          <div class="form-group mb-3">
-            <label class="form-label fs-8 fw-bold">Số điện thoại / Zalo nhận lịch:</label>
-            <input type="tel" v-model="trialForm.phone" class="form-control" placeholder="Ví dụ: 0908 123 456" />
-          </div>
-
-          <div class="form-group mb-3">
-            <label class="form-label fs-8 fw-bold">Hình thức học mong muốn:</label>
-            <div class="d-flex gap-3">
-              <label class="form-check-label d-flex align-items-center gap-1">
-                <input type="radio" value="online" v-model="trialForm.mode" /> Online (Face ID)
-              </label>
-              <label class="form-check-label d-flex align-items-center gap-1">
-                <input type="radio" value="offline" v-model="trialForm.mode" /> Học trực tiếp tại cơ sở
-              </label>
+          <!-- Rating stars -->
+          <div class="mb-3">
+            <label class="form-label-modal">Đánh giá trải nghiệm của bạn</label>
+            <div class="star-rating-row">
+              <button
+                v-for="n in 5"
+                :key="n"
+                type="button"
+                class="star-btn"
+                @click="feedbackForm.diem_danh_gia = n"
+              >
+                <i :class="n <= feedbackForm.diem_danh_gia ? 'fa-solid fa-star text-warning' : 'fa-regular fa-star text-muted'"></i>
+              </button>
+              <span class="star-label ms-2">
+                {{ ['', 'Rất tệ', 'Tệ', 'Bình thường', 'Tốt', 'Xuất sắc'][feedbackForm.diem_danh_gia] || 'Chưa chọn' }}
+              </span>
             </div>
           </div>
 
-          <div class="form-group mb-3">
-            <label class="form-label fs-8 fw-bold">Mục tiêu điểm số / Cần cải thiện:</label>
-            <textarea v-model="trialForm.note" class="form-control" rows="2" placeholder="Ví dụ: Lấy lại gốc Toán hình học 12, nâng band IELTS từ 5.5 lên 7.0..."></textarea>
+          <!-- Họ tên -->
+          <div class="mb-3">
+            <label class="form-label-modal">Họ và tên <span class="text-danger">*</span></label>
+            <input
+              v-model.trim="feedbackForm.ho_ten"
+              type="text"
+              class="form-control modal-input"
+              placeholder="Nguyễn Văn A"
+            />
+          </div>
+
+          <!-- Email -->
+          <div class="mb-3">
+            <label class="form-label-modal">Email (để nhận phản hồi)</label>
+            <input
+              v-model.trim="feedbackForm.email"
+              type="email"
+              class="form-control modal-input"
+              placeholder="example@email.com"
+            />
+          </div>
+
+          <!-- Loại phản hồi -->
+          <div class="mb-3">
+            <label class="form-label-modal">Loại phản hồi <span class="text-danger">*</span></label>
+            <div class="feedback-type-grid">
+              <button
+                v-for="type in feedbackTypes"
+                :key="type.value"
+                type="button"
+                :class="['feedback-type-btn', { active: feedbackForm.loai_phan_hoi === type.value }]"
+                @click="feedbackForm.loai_phan_hoi = type.value"
+              >
+                <i :class="type.icon + ' me-1'"></i> {{ type.label }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Nội dung -->
+          <div class="mb-3">
+            <label class="form-label-modal">Nội dung góp ý <span class="text-danger">*</span></label>
+            <textarea
+              v-model="feedbackForm.noi_dung"
+              class="form-control modal-input"
+              rows="4"
+              placeholder="Mô tả chi tiết ý kiến, đề xuất hoặc vấn đề bạn gặp phải..."
+            ></textarea>
+            <div class="char-count text-end">{{ feedbackForm.noi_dung.length }} / 2000 ký tự</div>
+          </div>
+
+          <!-- Alert -->
+          <div v-if="feedbackMessage" :class="['alert', 'py-2', 'px-3', feedbackSuccess ? 'alert-success' : 'alert-danger']" style="font-size:13px;">
+            {{ feedbackMessage }}
           </div>
         </div>
 
+        <!-- Footer -->
         <div class="modal-card-footer">
-          <button class="btn btn-secondary btn-sm" @click="closeTrialModal">Hủy bỏ</button>
-          <button class="btn btn-primary btn-sm px-3" @click="submitTrialBooking">
-            <i class="fa-solid fa-check me-1"></i> Xác nhận giữ chỗ học thử
+          <button class="btn btn-secondary btn-sm" @click="closeFeedbackModal">Hủy bỏ</button>
+          <button class="btn btn-primary btn-sm px-3" :disabled="feedbackLoading" @click="submitFeedback">
+            <span v-if="feedbackLoading" class="spinner-border spinner-border-sm me-1"></span>
+            <i v-else class="fa-solid fa-paper-plane me-1"></i>
+            Gửi góp ý
           </button>
         </div>
       </div>
@@ -882,46 +844,155 @@
 </template>
 
 <script>
+import { API_BASE, logout as logoutSession } from '../../services/api';
 export default {
   name: "LandingPage",
-  data() {
+    data() {
     return {
+      isLoggedIn: false,
+      showUserDropdown: false,
+      userAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80",
+      userName: "",
+      userRole: "",
       searchSubject: "Toán học (Lớp 1 - 12)",
       searchLocation: "Quận 1 / Trực tuyến",
       searchTimeSlot: "Tối (18:00 - 21:00)",
-      showTrialModal: false,
-      selectedProgram: "Chương trình Học thử EduLink",
-      trialForm: {
-        name: "",
-        phone: "",
-        mode: "online",
-        note: ""
-      }
+      // ===== ĐÓNG GÓP Ý KIẾN =====
+      showFeedbackModal: false,
+      feedbackLoading: false,
+      feedbackMessage: "",
+      feedbackSuccess: false,
+      feedbackForm: {
+        ho_ten: "",
+        email: "",
+        loai_phan_hoi: "gop_y",
+        diem_danh_gia: 0,
+        noi_dung: ""
+      },
+      feedbackTypes: [
+        { value: "gop_y",     label: "Góp ý",     icon: "fa-regular fa-lightbulb" },
+        { value: "bao_loi",   label: "Báo lỗi",   icon: "fa-solid fa-bug" },
+        { value: "khen_ngoi", label: "Khen ngợi", icon: "fa-regular fa-thumbs-up" },
+        { value: "khieu_nai", label: "Khiếu nại", icon: "fa-solid fa-triangle-exclamation" },
+        { value: "khac",      label: "Khác",       icon: "fa-regular fa-circle-question" }
+      ]
     };
+    },
+  mounted() {
+    const token = localStorage.getItem("token");
+    if (token) {
+      this.isLoggedIn = true;
+      this.userRole = localStorage.getItem("role") || "";
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        try {
+          const userObj = JSON.parse(userStr);
+          this.userName = userObj.ho_ten || userObj.name || "Khách hàng";
+          if (userObj.avatar) this.userAvatar = userObj.avatar;
+        } catch (e) {}
+      }
+    }
+    // Đóng dropdown khi click ra ngoài
+    document.addEventListener("click", this.closeDropdownOnClickOutside);
+  },
+  beforeUnmount() {
+    document.removeEventListener("click", this.closeDropdownOnClickOutside);
   },
   methods: {
+    toggleUserDropdown(e) {
+      this.showUserDropdown = !this.showUserDropdown;
+    },
+    closeDropdownOnClickOutside(e) {
+      const wrapper = this.$el.querySelector('.user-dropdown-wrapper');
+      if (wrapper && !wrapper.contains(e.target)) {
+        this.showUserDropdown = false;
+      }
+    },
+    async logout() {
+      try {
+        await logoutSession();
+      } catch (error) {
+        alert(error.message || 'Không thể kết nối máy chủ để đăng xuất.');
+        return;
+      }
+      this.isLoggedIn = false;
+      this.showUserDropdown = false;
+      this.$router.push("/");
+    },
+    handleChangePassword() {
+      window.alert('Chuc nang doi mat khau se som duoc cap nhat!');
+      this.showUserDropdown = false;
+    },
+    handleUpdateAvatar() {
+      window.alert('Chuc nang cap nhat avatar se som duoc cap nhat!');
+      this.showUserDropdown = false;
+    },
     handleSearchTutor() {
       alert(`Đang tìm kiếm gia sư theo tiêu chí:\n- Môn: ${this.searchSubject}\n- Khu vực: ${this.searchLocation}\n- Ca học: ${this.searchTimeSlot}\n\nHệ thống AI Smart Match đang tìm thấy 24 gia sư tương thích!`);
       this.$router.push("/my-schedule");
     },
     openTrialModal(programName) {
-      this.selectedProgram = programName;
-      this.showTrialModal = true;
+      this.$router.push({
+        path: '/dat-lich-hoc-thu',
+        query: { subject: programName }
+      });
     },
-    closeTrialModal() {
-      this.showTrialModal = false;
+
+    openFeedbackModal() {
+      this.showFeedbackModal = true;
+      this.feedbackMessage = "";
+      this.feedbackSuccess = false;
     },
-    submitTrialBooking() {
-      if (!this.trialForm.name || !this.trialForm.phone) {
-        alert("Vui lòng nhập họ tên và số điện thoại liên hệ để nhận lịch học thử!");
+    closeFeedbackModal() {
+      this.showFeedbackModal = false;
+      this.feedbackMessage = "";
+    },
+    async submitFeedback() {
+      this.feedbackMessage = "";
+
+      if (!this.feedbackForm.ho_ten) {
+        this.feedbackMessage = "Vui lòng nhập họ tên.";
+        this.feedbackSuccess = false;
         return;
       }
-      alert(`🎉 Đăng ký thành công!\nCảm ơn bạn ${this.trialForm.name}.\nChuyên viên EduLink sẽ liên hệ qua SĐT ${this.trialForm.phone} trong 30 phút để kích hoạt tài khoản học thử miễn phí kèm Face ID!`);
-      this.showTrialModal = false;
-      this.trialForm = { name: "", phone: "", mode: "online", note: "" };
-    },
-    openFeedbackModal() {
-      alert("Cảm ơn bạn đã quan tâm! Bạn có thể gửi đóng góp ý kiến trực tiếp qua email: hotro@edulink.vn hoặc hotline: 1900 8899.");
+      if (!this.feedbackForm.noi_dung || this.feedbackForm.noi_dung.length < 10) {
+        this.feedbackMessage = "Nội dung góp ý phải có ít nhất 10 ký tự.";
+        this.feedbackSuccess = false;
+        return;
+      }
+
+      this.feedbackLoading = true;
+      try {
+        const res = await fetch(`${API_BASE}/dong-gop-y-kien`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({
+            ho_ten: this.feedbackForm.ho_ten,
+            email: this.feedbackForm.email,
+            loai_phan_hoi: this.feedbackForm.loai_phan_hoi,
+            diem_danh_gia: this.feedbackForm.diem_danh_gia || null,
+            noi_dung: this.feedbackForm.noi_dung
+          })
+        });
+        const data = await res.json();
+        if (data.status) {
+          this.feedbackSuccess = true;
+          this.feedbackMessage = data.message;
+          // Reset form sau 2.5s rồi đóng modal
+          setTimeout(() => {
+            this.feedbackForm = { ho_ten: "", email: "", loai_phan_hoi: "gop_y", diem_danh_gia: 0, noi_dung: "" };
+            this.closeFeedbackModal();
+          }, 2500);
+        } else {
+          this.feedbackSuccess = false;
+          this.feedbackMessage = data.message || "Gửi thất bại, vui lòng thử lại.";
+        }
+      } catch (err) {
+        this.feedbackSuccess = false;
+        this.feedbackMessage = "Không thể kết nối đến máy chủ.";
+      } finally {
+        this.feedbackLoading = false;
+      }
     },
     filterSubject(category) {
       alert("Đang hiển thị toàn bộ 24+ chuyên đề đào tạo từ Tiểu học đến Luyện thi Đại học Quốc gia!");
@@ -1057,298 +1128,148 @@ export default {
 }
 
 /* 2. HERO SECTION */
+/* 2. HERO SECTION BANNER */
 .hero-section {
-  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
-  padding: 50px 20px 60px;
+  position: relative;
+  min-height: 85vh;
+  display: flex;
+  align-items: center;
+  background-image: url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1920&q=80');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+.hero-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(15, 23, 42, 0.92) 0%, rgba(15, 23, 42, 0.7) 50%, rgba(15, 23, 42, 0.3) 100%);
+  z-index: 1;
 }
 
 .hero-container {
+  position: relative;
+  z-index: 2;
   max-width: 1240px;
+  width: 100%;
   margin: 0 auto;
-  display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 40px;
-  align-items: center;
+  padding: 0 20px;
 }
 
-.hero-pill-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background-color: #eff6ff;
-  color: #0060d2;
-  font-size: 12.5px;
-  font-weight: 600;
-  padding: 6px 14px;
-  border-radius: 20px;
-  border: 1px solid #bfdbfe;
-  margin-bottom: 20px;
+.hero-content {
+  max-width: 650px;
+  color: #ffffff;
+}
+
+.hero-badge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 8px 16px;
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 24px;
 }
 
 .hero-title {
-  font-size: 40px;
+  font-size: 3.5rem;
   font-weight: 800;
-  line-height: 1.25;
-  color: #0f172a;
-  letter-spacing: -0.5px;
-  margin-bottom: 18px;
+  line-height: 1.2;
+  margin-bottom: 20px;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.highlight-ai {
-  color: #0060d2;
-  position: relative;
+.highlight-text {
+  color: #38bdf8;
+  background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .hero-desc {
-  font-size: 15px;
-  color: #475569;
-  line-height: 1.65;
-  margin-bottom: 28px;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #e2e8f0;
+  margin-bottom: 40px;
 }
 
-/* Floating Search Bar */
-.hero-search-card {
+.hero-action-buttons {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 50px;
+}
+
+.hero-btn-main {
+  padding: 14px 28px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  background-color: #0060d2;
+  border: none;
+  transition: all 0.3s;
+}
+.hero-btn-main:hover {
+  background-color: #004fb0;
+  transform: translateY(-2px);
+}
+
+.hero-btn-alt {
+  padding: 14px 28px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  color: #ffffff;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.3s;
+}
+.hero-btn-alt:hover {
   background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
-  padding: 20px 22px;
-  box-shadow: 0 10px 30px rgba(0, 96, 210, 0.07);
+  color: #0f172a;
 }
 
-.search-inputs-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr auto;
-  gap: 12px;
-  align-items: flex-end;
+.hero-stats-bar {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 24px 32px;
+  border-radius: 16px;
+  display: inline-flex;
 }
 
-.filter-label {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: #64748b;
-  margin-bottom: 6px;
-  display: block;
+.h-stat h4 {
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0 0 4px 0;
+  color: #ffffff;
 }
 
-.input-with-icon {
-  position: relative;
-}
-
-.select-icon {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #94a3b8;
+.h-stat p {
   font-size: 13px;
-  pointer-events: none;
-}
-
-.filter-select {
-  padding-left: 32px;
-  font-size: 13px;
-  border-radius: 10px;
-  border-color: #cbd5e1;
-  background-color: #f8fafc;
-  height: 42px;
+  color: #cbd5e1;
+  margin: 0;
   font-weight: 500;
 }
 
-.filter-select:focus {
-  background-color: #ffffff;
-  border-color: #0060d2;
-  box-shadow: 0 0 0 3px rgba(0, 96, 210, 0.15);
-}
-
-.btn-search-tutor {
-  height: 42px;
-  padding: 0 20px;
-  border-radius: 10px;
-  font-size: 13.5px;
-  font-weight: 700;
-  background-color: #0060d2;
-  border-color: #0060d2;
-  white-space: nowrap;
-}
-
-.search-footer-note {
-  font-size: 12px;
-  color: #64748b;
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid #f1f5f9;
-}
-
-/* 3 Stats Row */
-.hero-stats-row {
-  display: flex;
-  align-items: center;
-  gap: 28px;
-  margin-top: 36px;
-}
-
-.stat-number {
-  font-size: 26px;
-  font-weight: 800;
-  color: #0f172a;
-  line-height: 1.1;
-}
-
-.star-gold {
-  color: #eab308;
-  font-size: 20px;
-}
-
-.stat-desc {
-  font-size: 12px;
-  color: #64748b;
-  margin-top: 4px;
-}
-
-.stat-divider {
+.h-stat-divider {
   width: 1px;
-  height: 36px;
-  background-color: #e2e8f0;
+  height: 40px;
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
-/* Hero Right: Tutor Floating Showcase Card */
-.hero-content-right {
-  display: flex;
-  justify-content: center;
+@media (max-width: 768px) {
+  .hero-title { font-size: 2.5rem; }
+  .hero-action-buttons { flex-direction: column; }
+  .hero-stats-bar { flex-direction: column; gap: 16px; width: 100%; text-align: center; }
+  .h-stat-divider { width: 40px; height: 1px; }
 }
-
-.hero-featured-card-wrap {
-  position: relative;
-  width: 100%;
-  max-width: 440px;
-}
-
-.hero-tutor-card {
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  padding: 24px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.06);
-}
-
-.tutor-header-row {
-  display: flex;
-  gap: 16px;
-}
-
-.tutor-card-avatar {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2.5px solid #0060d2;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.tutor-header-meta {
-  flex: 1;
-}
-
-.tutor-name-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.tutor-card-name {
-  font-size: 17px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.badge-online-ready {
-  background-color: #ecfdf5;
-  color: #059669;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 12px;
-  border: 1px solid #a7f3d0;
-}
-
-.tutor-card-role {
-  font-size: 12px;
-  color: #64748b;
-  margin: 3px 0 6px;
-}
-
-.tutor-card-rating {
-  font-size: 12px;
-}
-
-.meta-dot {
-  margin: 0 4px;
-  color: #cbd5e1;
-}
-
-.tutor-slot-box {
-  background-color: #f8fafc;
-  border: 1px dashed #cbd5e1;
-  border-radius: 12px;
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-}
-
-.btn-view-cal {
-  font-size: 11.5px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 8px;
-  text-decoration: none;
-}
-
-.tutor-cert-row {
-  background-color: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: 10px;
-  padding: 10px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-  color: #166534;
-  font-weight: 600;
-}
-
-.badge-match-100 {
-  background-color: #15803d;
-  color: #ffffff;
-  font-size: 10.5px;
-  padding: 2px 8px;
-  border-radius: 10px;
-}
-
-.floating-match-pill {
-  position: absolute;
-  bottom: -18px;
-  right: 16px;
-  background-color: #0f172a;
-  color: #ffffff;
-  font-size: 12px;
-  padding: 8px 16px;
-  border-radius: 30px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.pulsing-green-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
-}
-
 /* 3. FEATURES SECTION */
 .section-features {
   padding: 80px 20px;
@@ -2291,5 +2212,149 @@ export default {
   .footer-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ===== FEEDBACK MODAL ===== */
+.feedback-modal-card {
+  max-width: 520px;
+  max-height: 88vh;
+  overflow-y: auto;
+}
+
+.bg-purple {
+  background-color: #7c3aed;
+}
+
+.star-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.star-btn {
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 2px 3px;
+  transition: transform 0.15s;
+}
+
+.star-btn:hover {
+  transform: scale(1.2);
+}
+
+.star-label {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.feedback-type-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.feedback-type-btn {
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 50px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.feedback-type-btn:hover {
+  border-color: #94a3b8;
+  background: #f1f5f9;
+}
+
+.feedback-type-btn.active {
+  background: #eff6ff;
+  border-color: #0060d2;
+  color: #0060d2;
+  font-weight: 600;
+}
+
+.char-count {
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+/* ===== HEADER DROPDOWN ===== */
+.btn-login {
+  padding: 8px 18px;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.user-avatar-btn-circle {
+  background: none;
+  border: 2px solid transparent;
+  padding: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.user-avatar-btn-circle:hover, .user-avatar-btn-circle:focus {
+  border-color: #0060d2;
+}
+
+.avatar-img-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e2e8f0;
+}
+
+.user-dropdown-menu {
+  position: absolute;
+  top: 110%;
+  right: 0;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  min-width: 220px;
+  padding: 8px 0;
+  z-index: 100;
+  border: 1px solid #f1f5f9;
+}
+
+.dropdown-header {
+  padding: 8px 16px;
+  color: #0f172a;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 8px 0;
+}
+
+.dropdown-item {
+  display: block;
+  padding: 10px 16px;
+  color: #475569;
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background: #f8fafc;
+  color: #0060d2;
+}
+
+.dropdown-item.text-danger:hover {
+  color: #ef4444;
 }
 </style>
