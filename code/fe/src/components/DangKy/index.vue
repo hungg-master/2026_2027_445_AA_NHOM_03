@@ -5,17 +5,6 @@
       <div class="brand-side">
         <div class="brand-bg-overlay"></div>
 
-        <!-- Top navigation/faint header -->
-        <div class="brand-top-nav">
-          <div class="nav-item">
-            <span>Đăng ký</span>
-            <i class="fa-solid fa-chevron-down ms-1"></i>
-          </div>
-          <div class="nav-item">
-            <span>Lên tiết báo</span>
-          </div>
-        </div>
-
         <div class="brand-content">
           <!-- Logo EduLink -->
           <div class="brand-logo">
@@ -26,13 +15,17 @@
           </div>
 
           <!-- Hero Headline -->
-          <h2 class="hero-headline">Join our learning community</h2>
+          <h2 class="hero-headline">
+            {{ isLoginMode ? 'Chào mừng trở lại!' : 'Tham gia cộng đồng học tập' }}
+          </h2>
           <p class="hero-description">
-            Connect with top educators, manage your schedule seamlessly, and accelerate your educational journey today.
+            {{ isLoginMode
+              ? 'Đăng nhập để tiếp tục hành trình học tập và kết nối với giáo viên của bạn.'
+              : 'Kết nối với các giáo viên ưu tú, quản lý lịch học dễ dàng và thúc đẩy hành trình giáo dục của bạn.' }}
           </p>
         </div>
 
-        <!-- Floating 3D graphics & elements decoration -->
+        <!-- Floating decoration -->
         <div class="floating-elements">
           <div class="floating-orb orb-1"></div>
           <div class="floating-orb orb-2"></div>
@@ -45,36 +38,57 @@
         </div>
       </div>
 
-      <!-- Cột phải: Form Đăng ký -->
+      <!-- Cột phải: Form -->
       <div class="form-side">
-        <div class="form-header">
-          <h3 class="form-title">Create an Account</h3>
-          <p class="form-subtitle">Sign up to get started as a student.</p>
+        <!-- Tab chuyển Đăng ký / Đăng nhập -->
+        <div class="auth-tabs">
+          <button
+            :class="['tab-btn', { active: !isLoginMode }]"
+            @click="switchMode(false)"
+          >
+            Đăng ký
+          </button>
+          <button
+            :class="['tab-btn', { active: isLoginMode }]"
+            @click="switchMode(true)"
+          >
+            Đăng nhập
+          </button>
         </div>
 
-        <form @submit.prevent="handleRegister">
-          <!-- Full Name & Username -->
-          <div class="row g-3 mb-3">
-            <div class="col-sm-6">
-              <label class="form-label">Full Name</label>
-              <input
-                v-model.trim="form.fullName"
-                type="text"
-                class="form-control custom-input"
-                placeholder="John Doe"
-                required
-              />
+        <!-- ========== FORM ĐĂNG KÝ ========== -->
+        <form v-if="!isLoginMode" @submit.prevent="handleRegister">
+          <!-- Chọn loại tài khoản -->
+          <div class="mb-3">
+            <label class="form-label">Bạn là</label>
+            <div class="role-selector">
+              <button
+                type="button"
+                :class="['role-btn', { active: form.role === 'hoc_vien' }]"
+                @click="form.role = 'hoc_vien'"
+              >
+                <i class="fa-solid fa-user-graduate me-2"></i>Học viên
+              </button>
+              <button
+                type="button"
+                :class="['role-btn', { active: form.role === 'giao_vien' }]"
+                @click="form.role = 'giao_vien'"
+              >
+                <i class="fa-solid fa-chalkboard-user me-2"></i>Giáo viên
+              </button>
             </div>
-            <div class="col-sm-6">
-              <label class="form-label">Username</label>
-              <input
-                v-model.trim="form.username"
-                type="text"
-                class="form-control custom-input"
-                placeholder="johndoe123"
-                required
-              />
-            </div>
+          </div>
+
+          <!-- Họ tên -->
+          <div class="mb-3">
+            <label class="form-label">Họ và tên</label>
+            <input
+              v-model.trim="form.ho_ten"
+              type="text"
+              class="form-control custom-input"
+              placeholder="Nguyễn Văn A"
+              required
+            />
           </div>
 
           <!-- Email -->
@@ -84,51 +98,57 @@
               v-model.trim="form.email"
               type="email"
               class="form-control custom-input"
-              placeholder="john@example.com"
+              placeholder="example@email.com"
               required
+            />
+          </div>
+
+          <!-- Số điện thoại -->
+          <div class="mb-3">
+            <label class="form-label">Số điện thoại</label>
+            <input
+              v-model.trim="form.so_dien_thoai"
+              type="tel"
+              class="form-control custom-input"
+              placeholder="0901234567"
             />
           </div>
 
           <!-- Password -->
           <div class="mb-3">
-            <label class="form-label">Password</label>
-            <input
-              v-model="form.password"
-              type="password"
-              class="form-control custom-input"
-              placeholder="••••••••"
-              required
-            />
+            <label class="form-label">Mật khẩu</label>
+            <div class="input-password-wrapper">
+              <input
+                v-model="form.mat_khau"
+                :type="showPassword ? 'text' : 'password'"
+                class="form-control custom-input"
+                placeholder="Ít nhất 6 ký tự"
+                required
+              />
+              <button type="button" class="toggle-pw-btn" @click="showPassword = !showPassword">
+                <i :class="showPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i>
+              </button>
+            </div>
           </div>
 
           <!-- Confirm Password -->
-          <div class="mb-3">
-            <label class="form-label">Confirm Password</label>
-            <input
-              v-model="form.confirmPassword"
-              type="password"
-              class="form-control custom-input"
-              placeholder="••••••••"
-              required
-            />
+          <div class="mb-4">
+            <label class="form-label">Xác nhận mật khẩu</label>
+            <div class="input-password-wrapper">
+              <input
+                v-model="form.mat_khau_confirmation"
+                :type="showConfirmPassword ? 'text' : 'password'"
+                class="form-control custom-input"
+                placeholder="Nhập lại mật khẩu"
+                required
+              />
+              <button type="button" class="toggle-pw-btn" @click="showConfirmPassword = !showConfirmPassword">
+                <i :class="showConfirmPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i>
+              </button>
+            </div>
           </div>
 
-          <!-- Terms Checkbox -->
-          <div class="form-check mb-4">
-            <input
-              id="agreeTerms"
-              v-model="form.agreeTerms"
-              type="checkbox"
-              class="form-check-input custom-checkbox"
-              required
-            />
-            <label class="form-check-label terms-label" for="agreeTerms">
-              I agree to the <a href="javascript:void(0)" class="terms-link">Terms and Conditions</a> and
-              <a href="javascript:void(0)" class="terms-link">Privacy Policy</a>.
-            </label>
-          </div>
-
-          <!-- Alert message -->
+          <!-- Alert -->
           <div v-if="errorMessage" class="alert alert-danger py-2 px-3 mb-3" role="alert" style="font-size: 13.5px;">
             {{ errorMessage }}
           </div>
@@ -136,44 +156,91 @@
             {{ successMessage }}
           </div>
 
-          <!-- Submit Button -->
+          <!-- Submit -->
           <button type="submit" class="btn btn-primary submit-btn w-100" :disabled="loading">
             <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
-            Create Account
+            Tạo tài khoản
           </button>
 
-          <!-- Divider -->
-          <div class="auth-divider">
-            <span>Or sign up with</span>
+          <div class="auth-footer text-center mt-3">
+            <span>Đã có tài khoản? </span>
+            <a href="javascript:void(0)" class="login-link" @click="switchMode(true)">Đăng nhập</a>
           </div>
+        </form>
 
-          <!-- Social Sign Up -->
-          <div class="row g-3 mb-4">
-            <div class="col-6">
-              <button type="button" class="btn social-btn w-100" @click="handleSocialSignUp('Google')">
-                <svg class="social-icon" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
-                  <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.26v3.15C3.29 21.41 7.36 24 12 24z"/>
-                  <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.26C.46 8.16 0 9.97 0 12s.46 3.84 1.26 5.42l4.02-3.15z"/>
-                  <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.29 2.59 1.26 6.58l4.02 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
-                </svg>
-                <span>Google</span>
+        <!-- ========== FORM ĐĂNG NHẬP ========== -->
+        <form v-else @submit.prevent="handleLogin">
+          <!-- Chọn loại tài khoản -->
+          <div class="mb-3">
+            <label class="form-label">Đăng nhập với tư cách</label>
+            <div class="role-selector">
+              <button
+                type="button"
+                :class="['role-btn', { active: loginForm.role === 'hoc_vien' }]"
+                @click="loginForm.role = 'hoc_vien'"
+              >
+                <i class="fa-solid fa-user-graduate me-2"></i>Học viên
+              </button>
+              <button
+                type="button"
+                :class="['role-btn', { active: loginForm.role === 'giao_vien' }]"
+                @click="loginForm.role = 'giao_vien'"
+              >
+                <i class="fa-solid fa-chalkboard-user me-2"></i>Giáo viên
               </button>
             </div>
-            <div class="col-6">
-              <button type="button" class="btn social-btn w-100" @click="handleSocialSignUp('Facebook')">
-                <svg class="social-icon" viewBox="0 0 24 24" fill="#1877F2">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                </svg>
-                <span>Facebook</span>
+          </div>
+
+          <!-- Email -->
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input
+              v-model.trim="loginForm.email"
+              type="email"
+              class="form-control custom-input"
+              placeholder="example@email.com"
+              required
+            />
+          </div>
+
+          <!-- Password -->
+          <div class="mb-2">
+            <label class="form-label">Mật khẩu</label>
+            <div class="input-password-wrapper">
+              <input
+                v-model="loginForm.mat_khau"
+                :type="showLoginPassword ? 'text' : 'password'"
+                class="form-control custom-input"
+                placeholder="Mật khẩu của bạn"
+                required
+              />
+              <button type="button" class="toggle-pw-btn" @click="showLoginPassword = !showLoginPassword">
+                <i :class="showLoginPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i>
               </button>
             </div>
           </div>
 
-          <!-- Footer Link -->
-          <div class="auth-footer text-center">
-            <span>Already have an account? </span>
-            <router-link to="/login" class="login-link">Log In</router-link>
+          <div class="d-flex justify-content-end mb-4">
+            <a href="javascript:void(0)" class="forgot-link">Quên mật khẩu?</a>
+          </div>
+
+          <!-- Alert -->
+          <div v-if="errorMessage" class="alert alert-danger py-2 px-3 mb-3" role="alert" style="font-size: 13.5px;">
+            {{ errorMessage }}
+          </div>
+          <div v-if="successMessage" class="alert alert-success py-2 px-3 mb-3" role="alert" style="font-size: 13.5px;">
+            {{ successMessage }}
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" class="btn btn-primary submit-btn w-100" :disabled="loading">
+            <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+            Đăng nhập
+          </button>
+
+          <div class="auth-footer text-center mt-3">
+            <span>Chưa có tài khoản? </span>
+            <a href="javascript:void(0)" class="login-link" @click="switchMode(false)">Đăng ký ngay</a>
           </div>
         </form>
       </div>
@@ -182,63 +249,158 @@
 </template>
 
 <script>
+import axios from 'axios';
+
+import { API_BASE } from '../../services/api';
+
 export default {
   name: "DangKyView",
   data() {
     return {
-      form: {
-        fullName: "",
-        username: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-        agreeTerms: false
-      },
+      isLoginMode: false,
       loading: false,
       errorMessage: "",
-      successMessage: ""
+      successMessage: "",
+      showPassword: false,
+      showConfirmPassword: false,
+      showLoginPassword: false,
+
+      // Form đăng ký
+      form: {
+        role: 'hoc_vien',
+        ho_ten: "",
+        email: "",
+        so_dien_thoai: "",
+        mat_khau: "",
+        mat_khau_confirmation: ""
+      },
+
+      // Form đăng nhập
+      loginForm: {
+        role: 'hoc_vien',
+        email: "",
+        mat_khau: ""
+      }
     };
   },
   methods: {
-    handleRegister() {
+    switchMode(isLogin) {
+      this.isLoginMode = isLogin;
+      this.errorMessage = "";
+      this.successMessage = "";
+    },
+
+    async handleRegister() {
       this.errorMessage = "";
       this.successMessage = "";
 
-      if (!this.form.fullName || !this.form.username || !this.form.email || !this.form.password) {
-        this.errorMessage = "Vui lòng điền đầy đủ các thông tin yêu cầu.";
-        return;
-      }
-
-      if (this.form.password !== this.form.confirmPassword) {
+      if (this.form.mat_khau !== this.form.mat_khau_confirmation) {
         this.errorMessage = "Mật khẩu và xác nhận mật khẩu không khớp!";
         return;
       }
-
-      if (this.form.password.length < 6) {
+      if (this.form.mat_khau.length < 6) {
         this.errorMessage = "Mật khẩu phải chứa ít nhất 6 ký tự.";
         return;
       }
 
-      if (!this.form.agreeTerms) {
-        this.errorMessage = "Bạn cần đồng ý với Điều khoản và Chính sách quyền riêng tư.";
-        return;
-      }
-
       this.loading = true;
-      setTimeout(() => {
+      try {
+        const endpoint = this.form.role === 'giao_vien'
+          ? `${API_BASE}/giao-vien/register`
+          : `${API_BASE}/hoc-vien/register`;
+
+        const payload = {
+          ho_ten: this.form.ho_ten,
+          email: this.form.email,
+          so_dien_thoai: this.form.so_dien_thoai,
+          password: this.form.mat_khau,
+          re_password: this.form.mat_khau_confirmation
+        };
+
+        const res = await axios.post(endpoint, payload);
+
+        if (res.data.status) {
+          this.successMessage = res.data.message || "Đăng ký thành công! Vui lòng đăng nhập.";
+          // Reset form
+          this.form = { role: this.form.role, ho_ten: "", email: "", so_dien_thoai: "", mat_khau: "", mat_khau_confirmation: "" };
+          setTimeout(() => this.switchMode(true), 1500);
+        } else {
+          this.errorMessage = res.data.message || "Đăng ký thất bại, vui lòng thử lại.";
+        }
+      } catch (err) {
+        if (err.response && err.response.data) {
+          const data = err.response.data;
+          if (data.errors) {
+            const firstErr = Object.values(data.errors)[0];
+            this.errorMessage = Array.isArray(firstErr) ? firstErr[0] : firstErr;
+          } else {
+            this.errorMessage = data.message || "Có lỗi xảy ra, vui lòng thử lại.";
+          }
+        } else {
+          this.errorMessage = "Không thể kết nối đến máy chủ.";
+        }
+      } finally {
         this.loading = false;
-        this.successMessage = `Tài khoản ${this.form.username} đã được khởi tạo thành công!`;
-      }, 1000);
+      }
     },
-    handleSocialSignUp(provider) {
-      alert(`Đang kết nối xác thực qua ${provider}...`);
+
+    async handleLogin() {
+      this.errorMessage = "";
+      this.successMessage = "";
+      this.loading = true;
+
+      try {
+        const endpoint = this.loginForm.role === 'giao_vien'
+          ? `${API_BASE}/giao-vien/login`
+          : `${API_BASE}/hoc-vien/login`;
+
+        const res = await axios.post(endpoint, {
+          email: this.loginForm.email,
+          password: this.loginForm.mat_khau
+        });
+
+        if (res.data.status) {
+          // Backend trả về: { status, message, token, user }
+          const token = res.data.token;
+          const user = res.data.user;
+          const role = this.loginForm.role;
+
+          // Lưu token và role vào localStorage
+          localStorage.setItem('token', token);
+          localStorage.setItem('role', role);
+          localStorage.setItem('user', JSON.stringify(user));
+
+          this.successMessage = "Đăng nhập thành công! Đang chuyển hướng...";
+
+          // Chuyển hướng theo role hoặc về trang đã yêu cầu trước đó
+          setTimeout(() => {
+            const redirectTo = this.$route.query.redirect;
+            if (redirectTo) {
+              this.$router.push(redirectTo);
+            } else if (role === 'giao_vien') {
+              this.$router.push('/ho-so-giang-vien');
+            } else {
+              this.$router.push('/hoc-vien');
+            }
+          }, 800);
+        } else {
+          this.errorMessage = res.data.message || "Đăng nhập thất bại.";
+        }
+      } catch (err) {
+        if (err.response && err.response.data) {
+          this.errorMessage = err.response.data.message || "Email hoặc mật khẩu không đúng.";
+        } else {
+          this.errorMessage = "Không thể kết nối đến máy chủ.";
+        }
+      } finally {
+        this.loading = false;
+      }
     }
   }
 };
 </script>
 
 <style scoped>
-/* Toàn màn hình nền sáng */
 .auth-page {
   min-height: 100vh;
   background-color: #f3f6fc;
@@ -249,7 +411,6 @@ export default {
   font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-/* Khung card bo tròn chuẩn thiết kế */
 .auth-card {
   width: 100%;
   max-width: 1040px;
@@ -262,66 +423,35 @@ export default {
   min-height: 680px;
 }
 
-/* CỘT TRÁI - HERO BRAND BANNER */
+/* CỘT TRÁI */
 .brand-side {
-  width: 48%;
+  width: 44%;
   position: relative;
   background: url("https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80") center center / cover no-repeat;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  padding: 36px 40px;
+  justify-content: center;
+  padding: 40px;
   overflow: hidden;
 }
 
-/* Lớp phủ sáng mờ dịu nhẹ tạo chiều sâu như ảnh mẫu */
 .brand-bg-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    145deg,
-    rgba(255, 255, 255, 0.94) 0%,
-    rgba(240, 246, 255, 0.88) 35%,
-    rgba(224, 238, 255, 0.72) 70%,
-    rgba(215, 232, 255, 0.85) 100%
-  );
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(145deg,
+    rgba(255,255,255,0.94) 0%,
+    rgba(240,246,255,0.88) 35%,
+    rgba(224,238,255,0.72) 70%,
+    rgba(215,232,255,0.85) 100%);
   backdrop-filter: blur(2px);
   z-index: 1;
-}
-
-/* Top nav mờ ở góc trên banner */
-.brand-top-nav {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  justify-content: flex-end;
-  gap: 20px;
-  font-size: 13px;
-  color: #64748b;
-  margin-bottom: 24px;
-}
-
-.brand-top-nav .nav-item {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  transition: color 0.2s;
-}
-
-.brand-top-nav .nav-item:hover {
-  color: #0b5ed7;
 }
 
 .brand-content {
   position: relative;
   z-index: 2;
-  margin-top: 10px;
 }
 
-/* Logo EduLink */
 .brand-logo {
   display: inline-flex;
   align-items: center;
@@ -342,24 +472,20 @@ export default {
   letter-spacing: -0.5px;
 }
 
-/* Tiêu đề & mô tả cột trái */
 .hero-headline {
-  font-size: 27px;
+  font-size: 26px;
   font-weight: 700;
   color: #1a202c;
   line-height: 1.35;
-  margin-bottom: 16px;
-  letter-spacing: -0.3px;
+  margin-bottom: 14px;
 }
 
 .hero-description {
-  font-size: 14.5px;
+  font-size: 14px;
   color: #4a5568;
-  line-height: 1.6;
-  max-width: 360px;
+  line-height: 1.65;
 }
 
-/* Floating 3D graphics & elements decoration */
 .floating-elements {
   position: absolute;
   inset: 0;
@@ -374,45 +500,30 @@ export default {
 }
 
 .orb-1 {
-  width: 140px;
-  height: 140px;
-  top: 35%;
-  left: 20%;
-  background: radial-gradient(circle, rgba(96, 165, 250, 0.45) 0%, rgba(255, 255, 255, 0) 70%);
+  width: 140px; height: 140px;
+  top: 15%; left: 20%;
+  background: radial-gradient(circle, rgba(96,165,250,0.45) 0%, rgba(255,255,255,0) 70%);
 }
 
 .orb-2 {
-  width: 180px;
-  height: 180px;
-  bottom: 15%;
-  right: 10%;
-  background: radial-gradient(circle, rgba(147, 197, 253, 0.5) 0%, rgba(255, 255, 255, 0) 70%);
+  width: 180px; height: 180px;
+  bottom: 15%; right: 5%;
+  background: radial-gradient(circle, rgba(147,197,253,0.5) 0%, rgba(255,255,255,0) 70%);
 }
 
 .floating-book {
   position: absolute;
-  color: rgba(99, 142, 236, 0.45);
+  color: rgba(99,142,236,0.4);
   font-size: 42px;
-  filter: drop-shadow(0 8px 16px rgba(0, 80, 200, 0.15));
-  transform: rotate(-12deg);
+  filter: drop-shadow(0 8px 16px rgba(0,80,200,0.15));
 }
 
-.book-1 {
-  top: 38%;
-  right: 18%;
-}
+.book-1 { top: 55%; right: 15%; transform: rotate(-12deg); }
+.book-2 { bottom: 20%; left: 30%; transform: rotate(8deg); font-size: 32px; color: rgba(125,172,255,0.35); }
 
-.book-2 {
-  bottom: 24%;
-  left: 35%;
-  transform: rotate(8deg);
-  font-size: 34px;
-  color: rgba(125, 172, 255, 0.4);
-}
-
-/* CỘT PHẢI - FORM ĐĂNG KÝ */
+/* CỘT PHẢI */
 .form-side {
-  width: 52%;
+  width: 56%;
   padding: 44px 48px;
   display: flex;
   flex-direction: column;
@@ -420,22 +531,64 @@ export default {
   background: #ffffff;
 }
 
-.form-header {
-  margin-bottom: 24px;
+/* Tabs chuyển Login / Register */
+.auth-tabs {
+  display: flex;
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 28px;
+  gap: 4px;
 }
 
-.form-title {
-  font-size: 23px;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 6px;
-  letter-spacing: -0.3px;
-}
-
-.form-subtitle {
-  font-size: 14px;
+.tab-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  border-radius: 9px;
+  padding: 10px 0;
+  font-size: 14.5px;
+  font-weight: 600;
   color: #64748b;
-  margin-bottom: 0;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.tab-btn.active {
+  background: #ffffff;
+  color: #0060d2;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Role Selector */
+.role-selector {
+  display: flex;
+  gap: 10px;
+}
+
+.role-btn {
+  flex: 1;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 10px 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.role-btn.active {
+  background: #eff6ff;
+  border-color: #0060d2;
+  color: #0060d2;
+  font-weight: 600;
+}
+
+.role-btn:hover:not(.active) {
+  border-color: #94a3b8;
+  background: #f8fafc;
 }
 
 /* Labels & Inputs */
@@ -469,39 +622,48 @@ export default {
   outline: none;
 }
 
-/* Terms Checkbox */
-.terms-label {
-  font-size: 13px;
-  color: #475569;
-  line-height: 1.4;
-  user-select: none;
+/* Password input với toggle */
+.input-password-wrapper {
+  position: relative;
 }
 
-.custom-checkbox {
-  width: 17px;
-  height: 17px;
-  border-radius: 4px;
-  border: 1px solid #cbd5e1;
-  margin-top: 2px;
+.input-password-wrapper .custom-input {
+  width: 100%;
+  padding-right: 42px;
+}
+
+.toggle-pw-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: #94a3b8;
   cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  display: flex;
+  align-items: center;
 }
 
-.custom-checkbox:checked {
-  background-color: #0060d2;
-  border-color: #0060d2;
+.toggle-pw-btn:hover {
+  color: #475569;
 }
 
-.terms-link {
+/* Quên mật khẩu */
+.forgot-link {
+  font-size: 13px;
   color: #0060d2;
   text-decoration: none;
   font-weight: 500;
 }
 
-.terms-link:hover {
+.forgot-link:hover {
   text-decoration: underline;
 }
 
-/* Nút Submit Create Account */
+/* Submit Button */
 .submit-btn {
   background-color: #0060d2;
   border: none;
@@ -514,66 +676,15 @@ export default {
   box-shadow: 0 4px 12px rgba(0, 96, 210, 0.2);
 }
 
-.submit-btn:hover {
+.submit-btn:hover:not(:disabled) {
   background-color: #004fb0;
   box-shadow: 0 6px 16px rgba(0, 96, 210, 0.32);
   transform: translateY(-1px);
 }
 
-.submit-btn:active {
-  transform: translateY(0);
-}
-
-/* Divider "Or sign up with" */
-.auth-divider {
-  position: relative;
-  text-align: center;
-  margin: 22px 0;
-}
-
-.auth-divider::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background-color: #e2e8f0;
-}
-
-.auth-divider span {
-  position: relative;
-  background-color: #ffffff;
-  padding: 0 14px;
-  font-size: 12.5px;
-  color: #64748b;
-}
-
-/* Social Buttons */
-.social-btn {
-  height: 44px;
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  font-size: 13.5px;
-  font-weight: 500;
-  color: #1e293b;
-  transition: all 0.2s ease;
-}
-
-.social-btn:hover {
-  background-color: #f8fafc;
-  border-color: #cbd5e1;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-}
-
-.social-icon {
-  width: 18px;
-  height: 18px;
+.submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 /* Footer Log In */
@@ -586,14 +697,14 @@ export default {
   color: #0060d2;
   font-weight: 600;
   text-decoration: none;
-  margin-left: 4px;
+  cursor: pointer;
 }
 
 .login-link:hover {
   text-decoration: underline;
 }
 
-/* Responsive cho màn hình tablet & mobile */
+/* Responsive */
 @media (max-width: 991px) {
   .auth-card {
     flex-direction: column;
@@ -601,12 +712,12 @@ export default {
   }
   .brand-side {
     width: 100%;
-    min-height: 260px;
+    min-height: 220px;
     padding: 30px;
   }
   .form-side {
     width: 100%;
-    padding: 36px 28px;
+    padding: 32px 24px;
   }
 }
 </style>

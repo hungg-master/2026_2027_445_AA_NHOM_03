@@ -648,7 +648,7 @@ export default {
       this.uploadedFiles.splice(index, 1);
     },
     handleRemindLater() {
-      alert("Hệ thống sẽ nhắc nhở bạn đánh giá lại buổi học này sau 24 giờ qua thông báo!");
+      alert("Bạn có thể quay lại đánh giá sau. Chưa có lịch nhắc tự động.");
       this.$router.push("/hoc-vien");
     },
     submitReview() {
@@ -657,8 +657,7 @@ export default {
         return;
       }
 
-      alert(`🎉 Cảm ơn bạn đã gửi đánh giá!\n\nBạn đã nhận thành công +50 Xu EduPoints vào tài khoản học tập.\nÝ kiến của bạn đã được ghi nhận và xác thực qua Face ID an toàn!`);
-      this.$router.push("/hoc-vien");
+      alert("Chức năng lưu đánh giá chưa sẵn sàng. Nội dung của bạn chưa được gửi.");
     },
     viewAllReviews() {
       alert("Đang hiển thị toàn bộ 128 đánh giá thực tế đã qua kiểm duyệt Face ID của TS. Nguyễn Minh Triết!");

@@ -11,7 +11,7 @@ class GiaoVienMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $user = Auth::guard('giao_vien')->user() ?: Auth::guard('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         if ($user && $user instanceof \App\Models\GiaoVien) {
             if ($user->is_block == 1) {
                 return response()->json([

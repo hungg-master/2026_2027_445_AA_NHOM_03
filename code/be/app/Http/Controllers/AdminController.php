@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Admin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
 {
@@ -88,30 +87,4 @@ class AdminController extends Controller
         ]);
     }
 
-    // Tiện ích tạo tài khoản Admin mặc định ban đầu nếu chưa có
-    public function taoAdminMacDinh()
-    {
-        $tonTai = Admin::where('email', 'admin@edulink.vn')->first();
-        if ($tonTai) {
-            return response()->json([
-                'status'  => true,
-                'message' => 'Tài khoản admin đã tồn tại',
-            ]);
-        }
-
-        $admin = Admin::create([
-            'ho_ten'        => 'Quản trị viên EduLink',
-            'email'         => 'admin@edulink.vn',
-            'password'      => Hash::make('123456'),
-            'so_dien_thoai' => '0905123456',
-            'tinh_trang'    => 1,
-            'is_master'     => 1,
-        ]);
-
-        return response()->json([
-            'status'  => true,
-            'message' => 'Đã tạo tài khoản admin mặc định: admin@edulink.vn / 123456',
-            'data'    => $admin,
-        ]);
-    }
 }
