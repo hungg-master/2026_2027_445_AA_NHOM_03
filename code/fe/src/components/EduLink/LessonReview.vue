@@ -1,39 +1,5 @@
 <template>
   <div class="lesson-review-page">
-    <!-- 1. TOP NAVBAR -->
-    <header class="main-header">
-      <div class="header-container">
-        <!-- Logo -->
-        <router-link to="/" class="brand-logo">
-          <div class="logo-icon-wrap">
-            <i class="fa-solid fa-graduation-cap"></i>
-          </div>
-          <span class="brand-name">Edu<span>Link</span></span>
-        </router-link>
-
-        <!-- Nav links -->
-        <nav class="nav-links">
-          <router-link to="/giao-vien" class="nav-item">Tìm gia sư</router-link>
-          <router-link to="/#subjects" class="nav-item">Môn học</router-link>
-          <router-link to="/my-schedule" class="nav-item">Lịch rảnh & Ghép lớp</router-link>
-          <router-link to="/face-id" class="nav-item">Tính năng Face ID</router-link>
-          <router-link to="/thanh-toan" class="nav-item">Bảng giá học phí</router-link>
-          <router-link to="/dang-ky" class="nav-item">Đăng ký làm gia sư</router-link>
-          <router-link to="/dang-ky" class="nav-item">Đăng nhập</router-link>
-        </nav>
-
-        <!-- Actions -->
-        <div class="header-actions">
-          <router-link to="/my-schedule" class="btn btn-primary btn-start-trial">
-            Bắt đầu học thử
-          </router-link>
-          <router-link to="/hoc-vien" class="user-avatar-btn" title="Hồ sơ học viên">
-            <i class="fa-regular fa-user"></i>
-          </router-link>
-        </div>
-      </div>
-    </header>
-
     <!-- 2. MAIN CONTAINER -->
     <main class="review-main-content">
       <div class="review-container">

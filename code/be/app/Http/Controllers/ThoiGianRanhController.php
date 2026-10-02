@@ -34,7 +34,7 @@ class ThoiGianRanhController extends Controller
         }
 
         $request->validate([
-            'schedules' => 'required|array',
+            'schedules' => 'present|array',
             'schedules.*.ngay_trong_tuan' => 'required|integer|min:0|max:6',
             'schedules.*.thoi_gian_bat_dau' => 'required',
             'schedules.*.thoi_gian_ket_thuc' => 'required',
@@ -111,7 +111,7 @@ class ThoiGianRanhController extends Controller
         }
 
         $request->validate([
-            'schedules' => 'required|array',
+            'schedules' => 'present|array',
             'schedules.*.ngay_trong_tuan' => 'required|integer|min:0|max:6',
             'schedules.*.thoi_gian_bat_dau' => 'required',
             'schedules.*.thoi_gian_ket_thuc' => 'required',

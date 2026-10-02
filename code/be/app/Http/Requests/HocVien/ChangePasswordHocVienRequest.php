@@ -16,7 +16,8 @@ class ChangePasswordHocVienRequest extends FormRequest
         return [
             'current_password' => 'required',
             'password'         => 'required|min:6|max:50',
-            're_password'      => 'required|same:password',
+            're_password'      => 'nullable|same:password',
+            'password_confirmation' => 'nullable|same:password',
         ];
     }
 

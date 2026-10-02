@@ -20,8 +20,7 @@ const http = axios.create({
 
 // Interceptor: Tự động gắn Bearer Token (nếu có)
 http.interceptors.request.use((config) => {
-  const token = localStorage.getItem('edulink_token')
-  const tokenType = localStorage.getItem('edulink_token_type') || 'giao_vien'
+  const token = localStorage.getItem('token') || localStorage.getItem('edulink_token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -36,6 +35,7 @@ http.interceptors.response.use(
       const { status, data } = error.response
       // Token hết hạn -> về trang đăng nhập
       if (status === 401) {
+        localStorage.removeItem('token')
         localStorage.removeItem('edulink_token')
         localStorage.removeItem('edulink_user')
         localStorage.removeItem('edulink_token_type')

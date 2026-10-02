@@ -69,6 +69,14 @@ class LopHoc extends Model
     }
 
     /**
+     * Phòng họp trực tuyến của lớp
+     */
+    public function phongHop()
+    {
+        return $this->hasOne(PhongHop::class, 'id_lop_hoc');
+    }
+
+    /**
      * Danh sách đăng ký của lớp
      */
     public function dangKyLops(): HasMany

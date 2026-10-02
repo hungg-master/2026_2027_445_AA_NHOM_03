@@ -1,20 +1,5 @@
 <template>
   <div class="edu-page">
-    <!-- 1. HEADER -->
-    <header class="edu-header">
-      <div class="header-container">
-        <router-link to="/giao-vien/lich-day" class="brand-logo">EduLink</router-link>
-        <nav class="header-nav">
-          <router-link to="/giao-vien/lich-day" class="nav-item active">Lịch dạy</router-link>
-          <router-link to="/giao-vien/quan-ly-lop" class="nav-item">Quản lý lớp</router-link>
-          <router-link to="/ho-so-giang-vien" class="nav-item">Hồ sơ</router-link>
-        </nav>
-        <div class="header-right">
-          <button class="btn-logout" @click="logout">Đăng xuất</button>
-        </div>
-      </div>
-    </header>
-
     <!-- 2. MAIN CONTENT -->
     <main class="main-content">
       <div class="content-container">
@@ -67,19 +52,25 @@
         </div>
 
         <!-- Week View -->
-        <div v-else-if="viewMode === 'week'" class="calendar-grid-wrapper">
-          <div class="calendar-grid">
-            <div class="grid-header">
-              <div class="time-col-header">Khung giờ</div>
-              <div v-for="day in weekDays" :key="day.key" class="day-col-header" :class="{ 'is-today': day.isToday }">
-                <div class="day-name">{{ day.name }}</div>
-                <div class="day-date">{{ day.date }}</div>
-              </div>
-            </div>
-            <div class="grid-body">
-              <div v-for="hour in timeSlots" :key="hour" class="grid-row">
-                <div class="time-cell">{{ hour }}</div>
-                <div v-for="day in weekDays" :key="day.key + '_' + hour" class="slot-cell">
+        <div v-else-if="viewMode === 'week'" class="calendar-table-wrapper">
+          <table class="calendar-table">
+            <thead>
+              <tr>
+                <th class="time-col-header">Khung giờ</th>
+                <th
+                  v-for="day in weekDays"
+                  :key="day.key"
+                  :class="['day-col-header', { 'is-today': day.isToday }]"
+                >
+                  <div class="day-name">{{ day.name }}</div>
+                  <div class="day-date">{{ day.date }}</div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="hour in timeSlots" :key="hour">
+                <td class="time-cell">{{ hour }}</td>
+                <td v-for="day in weekDays" :key="day.key + '_' + hour" class="slot-cell">
                   <div
                     v-for="lop in getLopInSlot(day, hour)"
                     :key="lop.id"
@@ -90,13 +81,13 @@
                     <div class="pill-name">{{ lop.mon_hoc?.ten_mon_hoc }}</div>
                     <div class="pill-meta">
                       <i :class="lop.hinh_thuc === 'online' ? 'fa-solid fa-video' : 'fa-solid fa-location-dot'"></i>
-                      {{ getSiSo(lop) }}/{{ lop.si_so_toi_da }}
+                      {{ getSiSo(lop) }}/{{ lop.si_so_toi_da }} HV
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
         <!-- List View -->
@@ -215,13 +206,55 @@ export default {
     this.loadData()
   },
   methods: {
+    formatDateInput(d) {
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return `${y}-${m}-${day}`
+    },
+
+    parseDateParts(iso) {
+      if (!iso) return null
+      const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/)
+      if (m) {
+        return {
+          year: parseInt(m[1]),
+          month: parseInt(m[2]),
+          day: parseInt(m[3]),
+          hour: parseInt(m[4]),
+          minute: parseInt(m[5]),
+          dateKey: `${m[1]}-${m[2]}-${m[3]}`,
+          timeStr: `${m[4]}:${m[5]}`,
+        }
+      }
+      const d = new Date(iso)
+      const y = d.getFullYear()
+      const mo = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      const h = String(d.getHours()).padStart(2, '0')
+      const mi = String(d.getMinutes()).padStart(2, '0')
+      return {
+        year: y,
+        month: parseInt(mo),
+        day: parseInt(day),
+        hour: parseInt(h),
+        minute: parseInt(mi),
+        dateKey: `${y}-${mo}-${day}`,
+        timeStr: `${h}:${mi}`,
+      }
+    },
+
     /** Set khoảng ngày mặc định: tuần hiện tại */
     setDefaultFilters() {
       const now = new Date()
+      const dayOfWeek = now.getDay()
+      const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
       const monday = new Date(now)
-      monday.setDate(now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1))
+      monday.setDate(now.getDate() + diffToMonday)
+
       const sunday = new Date(monday)
       sunday.setDate(monday.getDate() + 6)
+
       this.filters.from_date = this.formatDateInput(monday)
       this.filters.to_date = this.formatDateInput(sunday)
     },
@@ -229,19 +262,23 @@ export default {
     /** Build 7 ngày trong tuần */
     buildWeekDays() {
       if (!this.filters.from_date) return
-      const start = new Date(this.filters.from_date)
+      const [y, m, d] = this.filters.from_date.split('-').map(Number)
+      const start = new Date(y, m - 1, d)
       const days = []
       const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
       const today = new Date()
-      today.setHours(0,0,0,0)
+      const todayKey = this.formatDateInput(today)
+
       for (let i = 0; i < 7; i++) {
-        const d = new Date(start)
-        d.setDate(start.getDate() + i)
+        const cur = new Date(start)
+        cur.setDate(start.getDate() + i)
+        const curKey = this.formatDateInput(cur)
         days.push({
-          key: dayNames[d.getDay()],
-          date: d.getDate().toString().padStart(2, '0'),
-          fullDate: d,
-          isToday: d.getTime() === today.getTime(),
+          key: dayNames[cur.getDay()],
+          name: dayNames[cur.getDay()],
+          date: String(cur.getDate()).padStart(2, '0'),
+          dateKey: curKey,
+          isToday: curKey === todayKey,
         })
       }
       this.weekDays = days
@@ -276,12 +313,10 @@ export default {
       if (!this.dsLopHoc) return []
       const hourInt = parseInt(hour.split(':')[0])
       return this.dsLopHoc.filter(lop => {
-        const start = new Date(lop.thoi_gian_bat_dau)
-        const end = new Date(lop.thoi_gian_ket_thuc)
-        return start.getDate() === day.fullDate.getDate()
-          && start.getMonth() === day.fullDate.getMonth()
-          && start.getFullYear() === day.fullDate.getFullYear()
-          && start.getHours() === hourInt
+        if (!lop.thoi_gian_bat_dau) return false
+        const p = this.parseDateParts(lop.thoi_gian_bat_dau)
+        if (!p) return false
+        return p.dateKey === day.dateKey && p.hour === hourInt
       })
     },
 
@@ -302,23 +337,23 @@ export default {
 
     /** Helpers format */
     formatTime(iso) {
-      if (!iso) return ''
-      return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      const p = this.parseDateParts(iso)
+      return p ? p.timeStr : ''
     },
     formatFullDateTime(iso) {
-      if (!iso) return ''
-      return new Date(iso).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })
+      const p = this.parseDateParts(iso)
+      if (!p) return ''
+      return `${p.timeStr} ngày ${String(p.day).padStart(2,'0')}/${String(p.month).padStart(2,'0')}/${p.year}`
     },
     formatDay(iso) {
-      return new Date(iso).getDate().toString().padStart(2, '0')
+      const p = this.parseDateParts(iso)
+      return p ? String(p.day).padStart(2, '0') : ''
     },
     formatMonth(iso) {
-      const m = new Date(iso).getMonth() + 1
+      const p = this.parseDateParts(iso)
+      if (!p) return ''
       const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
-      return months[m-1]
-    },
-    formatDateInput(d) {
-      return d.toISOString().split('T')[0]
+      return months[p.month - 1]
     },
     formatMoney(v) {
       return new Intl.NumberFormat('vi-VN').format(v || 0)
@@ -393,13 +428,20 @@ export default {
 .loading-box, .empty-box { background: #fff; padding: 60px 20px; border-radius: 16px; border: 1px solid #e2e8f0; text-align: center; color: #64748b; }
 .empty-box i, .empty-box .fa { font-size: 36px; margin-bottom: 12px; color: #cbd5e1; }
 
-.calendar-grid-wrapper { background: #fff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; }
-.calendar-grid { display: grid; grid-template-columns: 90px repeat(7, 1fr); }
-.grid-header .time-col-header, .grid-header .day-col-header { background: #f8fafc; padding: 10px 6px; font-size: 12px; font-weight: 700; color: #475569; text-align: center; border-bottom: 1px solid #e2e8f0; }
-.grid-header .day-col-header.is-today { color: #0060d2; }
-.grid-body .time-cell { background: #fff; padding: 6px; font-size: 11px; color: #64748b; text-align: center; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #f1f5f9; min-height: 64px; }
-.grid-body .slot-cell { background: #fff; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; min-height: 64px; padding: 3px; }
-.session-pill { border-radius: 6px; padding: 4px 6px; margin-bottom: 3px; cursor: pointer; transition: transform 0.15s; }
+.calendar-table-wrapper { background: #fff; border-radius: 14px; border: 1px solid #e2e8f0; overflow-x: auto; box-shadow: 0 4px 16px rgba(0,0,0,0.02); }
+.calendar-table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 900px; }
+.calendar-table th, .calendar-table td { border: 1px solid #e2e8f0; }
+.time-col-header { width: 90px; background: #f8fafc; padding: 12px 8px; font-size: 13px; font-weight: 700; color: #475569; text-align: center; }
+.day-col-header { background: #f8fafc; padding: 12px 8px; text-align: center; }
+.day-col-header.is-today { background: #eff6ff; border-bottom: 3px solid #0060d2; }
+.day-name { font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 2px; }
+.is-today .day-name { color: #0060d2; }
+.day-date { font-size: 15px; font-weight: 800; color: #0f172a; }
+.is-today .day-date { color: #0060d2; }
+.time-cell { background: #f8fafc; text-align: center; vertical-align: middle; height: 68px; width: 90px; font-size: 12px; font-weight: 700; color: #64748b; }
+.slot-cell { background: #fff; vertical-align: top; padding: 5px; height: 68px; transition: background 0.15s; }
+.slot-cell:hover { background: #f8fafc; }
+.session-pill { border-radius: 8px; padding: 6px 8px; margin-bottom: 4px; cursor: pointer; transition: transform 0.15s; box-shadow: 0 2px 5px rgba(0,0,0,0.04); }
 .session-pill:hover { transform: translateY(-1px); }
 .session-pill.pill-online { background: #dbeafe; border-left: 3px solid #0060d2; }
 .session-pill.pill-offline { background: #dcfce7; border-left: 3px solid #16a34a; }

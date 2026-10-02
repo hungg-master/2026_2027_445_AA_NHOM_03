@@ -367,6 +367,7 @@ export default {
 
           // Lưu token và role vào localStorage
           localStorage.setItem('token', token);
+          localStorage.setItem('edulink_token', token);
           localStorage.setItem('role', role);
           localStorage.setItem('user', JSON.stringify(user));
 

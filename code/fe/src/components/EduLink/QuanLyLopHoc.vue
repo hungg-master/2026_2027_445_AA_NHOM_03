@@ -1,20 +1,5 @@
 <template>
   <div class="edu-page">
-    <!-- HEADER -->
-    <header class="edu-header">
-      <div class="header-container">
-        <router-link to="/giao-vien/quan-ly-lop" class="brand-logo">EduLink</router-link>
-        <nav class="header-nav">
-          <router-link to="/giao-vien/lich-day" class="nav-item">Lịch dạy</router-link>
-          <router-link to="/giao-vien/quan-ly-lop" class="nav-item active">Quản lý lớp</router-link>
-          <router-link to="/ho-so-giang-vien" class="nav-item">Hồ sơ</router-link>
-        </nav>
-        <div class="header-right">
-          <button class="btn-logout" @click="logout">Đăng xuất</button>
-        </div>
-      </div>
-    </header>
-
     <main class="main-content">
       <div class="content-container">
         <div class="page-header">

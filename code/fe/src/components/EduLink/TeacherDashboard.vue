@@ -12,17 +12,7 @@
           <span class="crumb-active">Không gian giảng viên: TS. Nguyễn Minh Triết (Khoa Toán - Tin học)</span>
         </nav>
 
-        <div class="role-switcher-box">
-          <span class="role-switcher-label"><i class="fa-solid fa-eye me-1"></i> Chế độ xem:</span>
-          <div class="role-switcher-pills">
-            <router-link to="/hoc-vien" class="role-pill">
-              <i class="fa-solid fa-user-graduate me-1"></i> Học viên
-            </router-link>
-            <router-link to="/ho-so-giang-vien" class="role-pill active">
-              <i class="fa-solid fa-chalkboard-user me-1"></i> Giáo viên
-            </router-link>
-          </div>
-        </div>
+
       </div>
 
       <!-- 2. TOP PROFILE BANNER (THẺ GIẢNG VIÊN) -->

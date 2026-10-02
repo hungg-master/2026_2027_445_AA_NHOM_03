@@ -29,6 +29,7 @@ class GiaoVien extends Authenticatable
         'is_active',
         'is_block',
         'tinh_trang',
+        'du_lieu_khuon_mat',
     ];
 
     protected $hidden = [

@@ -44,9 +44,20 @@ class LopHocPublicController extends Controller
             if ($request->filled('id_mon_hoc')) {
                 $query->where('id_mon_hoc', $request->id_mon_hoc);
             }
+            if ($request->filled('keyword')) {
+                $kw = trim($request->keyword);
+                $query->where(function ($q) use ($kw) {
+                    $q->whereHas('monHoc', function ($sub) use ($kw) {
+                        $sub->where('ten_mon_hoc', 'like', "%{$kw}%");
+                    })->orWhereHas('giaoVien', function ($sub) use ($kw) {
+                        $sub->where('ho_ten', 'like', "%{$kw}%");
+                    });
+                });
+            }
 
+            $perPage = $request->get('per_page', 12);
             $data = $query->orderBy('thoi_gian_bat_dau', 'asc')
-                ->paginate($request->get('per_page', 12));
+                ->paginate($perPage);
 
             // Thêm sĩ số
             $data->getCollection()->each(function ($lop) {
@@ -109,7 +120,7 @@ class LopHocPublicController extends Controller
     public function monHoc()
     {
         try {
-            $data = MonHoc::where('tinh_trang', 'hoat_dong')
+            $data = MonHoc::whereIn('tinh_trang', ['hoat_dong', 'active', 1])
                 ->orWhereNull('tinh_trang')
                 ->orderBy('ten_mon_hoc')
                 ->get();
