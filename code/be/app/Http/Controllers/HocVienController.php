@@ -218,4 +218,79 @@ class HocVienController extends Controller
             'data'   => $data,
         ]);
     }
+
+    public function xacThucKhuonMat(Request $request)
+    {
+        $request->validate([
+            'du_lieu_khuon_mat' => 'required'
+        ]);
+
+        $user = Auth::guard('sanctum')->user();
+        if (!$user && $request->id) {
+            $user = HocVien::find($request->id);
+        }
+
+        if (!$user) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Người dùng không tồn tại hoặc chưa đăng nhập!'
+            ], 401);
+        }
+
+        $vector_moi = is_string($request->du_lieu_khuon_mat)
+            ? json_decode($request->du_lieu_khuon_mat, true)
+            : $request->du_lieu_khuon_mat;
+
+        if (!is_array($vector_moi)) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Lỗi định dạng dữ liệu sinh trắc học.'
+            ], 400);
+        }
+
+        // Kiểm tra trùng lặp với học viên khác
+        $danh_sach_khac = HocVien::whereNotNull('du_lieu_khuon_mat')
+            ->where('id', '!=', $user->id)
+            ->get();
+
+        foreach ($danh_sach_khac as $user_khac) {
+            $vector_cu = is_string($user_khac->du_lieu_khuon_mat)
+                ? json_decode($user_khac->du_lieu_khuon_mat, true)
+                : $user_khac->du_lieu_khuon_mat;
+
+            $khoang_cach = $this->tinhToanDistance($vector_moi, $vector_cu);
+
+            if ($khoang_cach < 0.50) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Lỗi bảo mật! Sinh trắc học này đã được liên kết với một tài khoản khác trong hệ thống.'
+                ], 400);
+            }
+        }
+
+        $user->du_lieu_khuon_mat = is_array($request->du_lieu_khuon_mat)
+            ? json_encode($request->du_lieu_khuon_mat)
+            : $request->du_lieu_khuon_mat;
+        $user->save();
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'Xác thực và lưu Face ID thành công!',
+            'data'    => $user
+        ]);
+    }
+
+    private function tinhToanDistance($vectorA, $vectorB)
+    {
+        if (!is_array($vectorA) || !is_array($vectorB) || count($vectorA) === 0 || count($vectorA) !== count($vectorB)) {
+            return 1.0;
+        }
+
+        $sum = 0;
+        for ($i = 0; $i < count($vectorA); $i++) {
+            $sum += pow((float)$vectorA[$i] - (float)$vectorB[$i], 2);
+        }
+
+        return sqrt($sum);
+    }
 }

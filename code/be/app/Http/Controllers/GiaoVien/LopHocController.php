@@ -7,6 +7,7 @@ use App\Http\Requests\LopHoc\TaoLopHocRequest;
 use App\Models\LopHoc;
 use App\Models\MonHoc;
 use App\Models\PhongHoc;
+use App\Models\PhongHop;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -120,6 +121,23 @@ class LopHocController extends Controller
             $data['tinh_trang'] = $data['tinh_trang'] ?? 'sap_mo';
 
             $lopHoc = LopHoc::create($data);
+
+            // Tự động tạo sẵn phòng học trực tuyến cho lớp học
+            $maPhong = sprintf('%03d-%03d-%03d', mt_rand(100, 999), mt_rand(100, 999), mt_rand(100, 999));
+            PhongHop::create([
+                'ma_phong' => $maPhong,
+                'ten_phong' => 'Phòng học: ' . $lopHoc->ten_lop,
+                'id_chu_phong' => $gv->id,
+                'id_lop_hoc' => $lopHoc->id,
+                'so_nguoi_toi_da' => $lopHoc->so_luong_hoc_vien_toi_da ?: 100,
+                'mo_ta' => 'Phòng học trực tuyến EduLink cho lớp ' . $lopHoc->ten_lop,
+                'thoi_gian_bat_dau' => $lopHoc->thoi_gian_bat_dau ?: now(),
+                'trang_thai' => 1
+            ]);
+
+            // Cập nhật link_online cho lớp
+            $lopHoc->link_online = '/phong-hoc/' . $maPhong;
+            $lopHoc->save();
 
             // Load quan hệ để trả về đầy đủ
             $lopHoc->load(['monHoc', 'phongHoc']);

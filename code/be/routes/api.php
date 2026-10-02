@@ -80,6 +80,7 @@ Route::group(['prefix' => 'hoc-vien', 'middleware' => 'HocVienMiddleware'], func
     Route::get('profile/data', [HocVienController::class, 'getProfile']);
     Route::post('profile/update', [HocVienController::class, 'updateProfile']);
     Route::post('profile/face-id', [\App\Http\Controllers\FaceIdPhotoController::class, 'store']);
+    Route::post('xac-thuc-khuon-mat', [HocVienController::class, 'xacThucKhuonMat']);
     Route::post('profile/change-password', [HocVienController::class, 'changePassword']);
 
     // Lịch học + Lớp của tôi (MỚI)
@@ -109,9 +110,24 @@ Route::get('client/phong-hoc', [LopHocPublicController::class, 'phongHoc']);
 // 5. ĐÓNG GÓP Ý KIẾN (PUBLIC - không cần đăng nhập)
 // =========================================================================
 Route::post('dong-gop-y-kien', [\App\Http\Controllers\DongGopYKienController::class, 'store']);
+Route::post('nguoi-dung/xac-thuc-khuon-mat', [HocVienController::class, 'xacThucKhuonMat']);
 Route::post('hoc-thu', [\App\Http\Controllers\TrialBookingController::class, 'store'])->middleware('throttle:10,1');
 
 // Xem danh sách phản hồi (Admin only)
 Route::group(['prefix' => 'admin', 'middleware' => 'AdminMiddleware'], function () {
     Route::get('dong-gop-y-kien', [\App\Http\Controllers\DongGopYKienController::class, 'index']);
 });
+
+// =========================================================================
+// 6. PHÒNG HỌP TRỰC TUYẾN (EDULINK ONLINE ROOMS)
+// =========================================================================
+Route::post('phong-hop/create', [\App\Http\Controllers\PhongHopController::class, 'create']);
+Route::post('phong-hop/kiem-tra-phong-hop', [\App\Http\Controllers\PhongHopController::class, 'kiemTraPhongHop']);
+Route::post('phong-hop/tao-token', [\App\Http\Controllers\PhongHopController::class, 'taoToken']);
+Route::get('phong-hop/ma-phong', [\App\Http\Controllers\PhongHopController::class, 'maPhong']);
+Route::post('phong-hop/roi-phong', [\App\Http\Controllers\PhongHopController::class, 'roiPhong']);
+Route::get('phong-hop/lich-su-tham-gia', [\App\Http\Controllers\PhongHopController::class, 'lichSuThamGia']);
+
+Route::get('chi-tiet-phong-hop/data', [\App\Http\Controllers\PhongHopController::class, 'chiTietPhongHopData']);
+Route::post('chi-tiet-phong-hop/create', [\App\Http\Controllers\PhongHopController::class, 'chiTietPhongHopCreate']);
+Route::get('nguoi-dung/phong-hop-lien-quan', [\App\Http\Controllers\PhongHopController::class, 'phongHopLienQuan']);

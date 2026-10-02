@@ -1,21 +1,5 @@
 <template>
   <div class="edu-page">
-    <!-- HEADER -->
-    <header class="edu-header">
-      <div class="header-container">
-        <router-link to="/client/danh-sach-lop" class="brand-logo">EduLink</router-link>
-        <nav class="header-nav">
-          <router-link to="/client/danh-sach-lop" class="nav-item active">Khám phá lớp</router-link>
-          <router-link to="/hoc-vien/lich-hoc" class="nav-item">Lịch học</router-link>
-          <router-link to="/hoc-vien/lop-cua-toi" class="nav-item">Lớp của tôi</router-link>
-        </nav>
-        <div class="header-right">
-          <router-link v-if="!isLogged" to="/dang-ky" class="btn-login">Đăng nhập</router-link>
-          <button v-else class="btn-logout" @click="logout">Đăng xuất</button>
-        </div>
-      </div>
-    </header>
-
     <main class="main-content">
       <div class="content-container">
         <div class="page-title-area">
@@ -114,7 +98,7 @@ export default {
       dsLop: [],
       dsMonHoc: [],
       filters: { id_mon_hoc: '', hinh_thuc: '', loai_lop: '', keyword: '' },
-      isLogged: !!localStorage.getItem('edulink_token'),
+      isLogged: !!(localStorage.getItem('token') || localStorage.getItem('edulink_token')),
       searchTimer: null,
     }
   },

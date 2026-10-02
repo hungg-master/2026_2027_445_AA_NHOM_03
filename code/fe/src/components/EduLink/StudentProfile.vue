@@ -1,28 +1,16 @@
-﻿<template>
+<template>
   <div class="student-profile-page">
     <div class="profile-container">
-      <!-- 1. BREADCRUMB & ROLE SWITCHER -->
+      <!-- 1. BREADCRUMB (ĐÃ BỎ SWITCHER GIÁO VIÊN) -->
       <div class="breadcrumb-and-switcher">
         <nav class="breadcrumb-nav">
           <i class="fa-solid fa-house me-1"></i>
-          <router-link to="/my-schedule" class="crumb-link">Trang chủ</router-link>
+          <router-link to="/" class="crumb-link">Trang chủ</router-link>
           <span class="crumb-sep">›</span>
-          <span class="crumb-link">Quản lý học viên</span>
+          <span class="crumb-link">Học viên</span>
           <span class="crumb-sep">›</span>
-          <span class="crumb-active">Hồ sơ học viên: Nguyễn Linh Lan (Lớp 12A1)</span>
+          <span class="crumb-active">Hồ sơ cá nhân: {{ ten_nguoi_dung }}</span>
         </nav>
-
-        <div class="role-switcher-box">
-          <span class="role-switcher-label"><i class="fa-solid fa-eye me-1"></i> Chế độ xem:</span>
-          <div class="role-switcher-pills">
-            <router-link to="/hoc-vien" class="role-pill active">
-              <i class="fa-solid fa-user-graduate me-1"></i> Học viên
-            </router-link>
-            <router-link to="/ho-so-giang-vien" class="role-pill">
-              <i class="fa-solid fa-chalkboard-user me-1"></i> Giáo viên
-            </router-link>
-          </div>
-        </div>
       </div>
 
       <!-- 2. TOP PROFILE BANNER (THẺ HỌC VIÊN) -->
@@ -43,9 +31,10 @@
 
             <div class="student-meta-details">
               <div class="student-name-row">
-                <h1 class="student-name">Nguyễn Linh Lan</h1>
-                <span class="badge-faceid-verified">
-                  <span class="me-1"></span> Chưa xác thực danh tính
+                <h1 class="student-name">{{ ten_nguoi_dung }}</h1>
+                <span :class="da_xac_minh ? 'badge-faceid-verified' : 'badge-faceid-unverified'">
+                  <i :class="da_xac_minh ? 'bx bxs-check-shield text-success me-1' : 'bx bx-error-circle text-warning me-1'"></i>
+                  {{ da_xac_minh ? 'Đã xác thực Face ID sinh trắc học' : 'Chưa xác thực Face ID' }}
                 </span>
               </div>
 
@@ -448,55 +437,126 @@
 
         <!-- CỘT PHẢI: FACE ID, HỌC PHÍ & PHỤ HUYNH -->
         <aside class="profile-right-column">
-          <!-- CARD 1: CAP NHAT FACE ID -->
-          <div class="content-card" id="face-id-section" ref="faceIdSection">
+          <!-- CARD 1: XÁC THỰC FACE ID AI -->
+          <div class="content-card" id="face-id-section" ref="faceIdSection" style="border-radius: 16px;">
             <div class="card-header-flex mb-3">
               <div class="d-flex align-items-center gap-2">
-                <div class="card-title-icon text-success">
-                  <i class="fa-solid fa-fingerprint"></i>
+                <div class="d-flex justify-content-center align-items-center rounded me-2 shadow-sm"
+                     style="background-color: #fff7ed; width: 38px; height: 38px;">
+                  <i class="bx bx-face fs-4" style="color: #ea580c;"></i>
                 </div>
                 <div>
-                  <h3 class="card-title fs-6 mb-0">Cập nhật ảnh Face ID</h3>
-                  <div class="card-sub-label">Lưu ảnh để chuẩn bị xác thực danh tính</div>
+                  <h3 class="card-title fs-6 mb-0 fw-bolder text-dark">Xác thực Face ID AI</h3>
+                  <div class="card-sub-label">Bảo mật phòng học với công nghệ nhận diện AI</div>
                 </div>
               </div>
             </div>
 
-            <div class="faceid-current-photo-wrap">
-              <img
-                :src="faceIdPreview || 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=240&q=80'"
-                alt="Anh Face ID"
-                class="faceid-current-img"
-              />
-              <div class="faceid-verified-badge">
-                <i class="fa-solid fa-circle-info me-1"></i> Chưa xác thực
+            <!-- Trạng thái: ĐÃ XÁC MINH -->
+            <template v-if="da_xac_minh">
+              <div class="text-center py-3">
+                <div class="position-relative d-inline-block mb-3">
+                  <div class="rounded-circle d-flex justify-content-center align-items-center shadow-sm mx-auto"
+                       style="width: 130px; height: 130px; background-color: #f0fdf4; border: 2px solid #bbf7d0;">
+                    <i class="bx bx-check-double" style="font-size: 4rem; color: #22c55e;"></i>
+                  </div>
+                  <div class="position-absolute bottom-0 end-0 bg-success rounded-circle d-flex justify-content-center align-items-center border border-2 border-white"
+                       style="width: 36px; height: 36px;">
+                    <i class="bx bxs-shield-alt-2 text-white"></i>
+                  </div>
+                </div>
+
+                <h5 class="fw-bolder text-dark mb-1">Tài khoản đã xác thực</h5>
+                <p class="text-muted mx-auto mb-3 px-2" style="font-size: 0.85rem; line-height: 1.45;">
+                  Hệ thống AI đã ghi nhận mẫu khuôn mặt của bạn. Danh tính của bạn hiện đã được bảo vệ và sẵn sàng tham gia lớp học.
+                </p>
+
+                <div class="mb-3">
+                  <span class="badge px-3 py-2 fw-bold"
+                        style="background-color: #dcfce7; color: #15803d; border-radius: 30px; font-size: 0.8rem;">
+                    <i class="bx bxs-lock-alt me-1"></i> Mã hóa sinh trắc học
+                  </span>
+                </div>
+
+                <button @click="startFaceScan" class="btn btn-sm btn-outline-secondary px-3 py-1" style="border-radius: 8px; font-size: 0.8rem;">
+                  <i class="bx bx-refresh me-1"></i> Quét lại khuôn mặt
+                </button>
               </div>
-            </div>
+            </template>
 
-            <div class="faceid-upload-area mt-3" @click="triggerFileInput" @dragover.prevent @drop.prevent="handleDrop">
-              <input
-                ref="faceIdFileInput"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                style="display:none"
-                @change="handleFaceIdFileChange"
-              />
-              <i class="fa-solid fa-cloud-arrow-up faceid-upload-icon"></i>
-              <p class="faceid-upload-text">
-                Kéo thả hoặc <span class="text-primary fw-bold">chọn ảnh</span>
-              </p>
-              <p class="faceid-upload-hint">JPG, PNG, WEBP tối đa 5MB</p>
-            </div>
+            <!-- Trạng thái: CHƯA XÁC MINH / ĐANG QUÉT -->
+            <template v-else>
+              <div class="text-center py-2">
+                <div class="d-flex justify-content-center">
+                  <div class="position-relative d-flex justify-content-center align-items-center"
+                       style="width: 200px; height: 200px;">
+                    <!-- Placeholder khi chua bat camera -->
+                    <div v-show="!isScanning" class="position-relative w-100 h-100 d-flex justify-content-center align-items-center">
+                      <div class="position-absolute rounded-circle"
+                           style="width: 200px; height: 200px; border: 2px solid #fed7aa; background: #fff7ed;">
+                      </div>
+                      <div class="position-absolute rounded-circle d-flex justify-content-center align-items-center"
+                           style="width: 150px; height: 150px; background: #f1f5f9;">
+                        <i class="bx bx-user" style="font-size: 4rem; color: #cbd5e1;"></i>
+                      </div>
+                      <div class="position-absolute bottom-0 bg-dark text-white px-3 py-1 rounded-pill"
+                           style="font-size: 0.7rem; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px;">
+                        SẴN SÀNG QUÉT
+                      </div>
+                    </div>
 
-            <div v-if="faceIdMessage" :class="['alert','mt-2','py-2','px-3', faceIdSuccess ? 'alert-success' : 'alert-danger']" style="font-size:13px;">
-              {{ faceIdMessage }}
-            </div>
+                    <!-- Video & Canvas webcam truc tiep -->
+                    <div v-show="isScanning" class="position-relative w-100 h-100 d-flex justify-content-center align-items-center">
+                      <video ref="videoElement" autoplay muted playsinline
+                             style="width: 200px; height: 200px; border-radius: 50%; object-fit: cover; border: 4px solid #ea580c; transform: scaleX(-1); z-index: 10;">
+                      </video>
+                      <canvas ref="overlayCanvas"
+                              style="position: absolute; top: 0; left: 0; width: 200px; height: 200px; border-radius: 50%; z-index: 11; pointer-events: none;">
+                      </canvas>
+                      <div class="scan-line-circle"></div>
+                    </div>
+                  </div>
+                </div>
 
-            <button class="btn btn-primary w-100 mt-3" :disabled="!faceIdFile || faceIdUploading" @click="saveFaceId">
-              <span v-if="faceIdUploading" class="spinner-border spinner-border-sm me-2"></span>
-              <i v-else class="fa-solid fa-floppy-disk me-1"></i>
-              Lưu ảnh Face ID
-            </button>
+                <div class="mt-3 text-center" style="min-height: 24px;">
+                  <small v-if="isModelLoading" class="status-text-anim text-warning">
+                    <i class="bx bx-loader-alt bx-spin me-1"></i>
+                    {{ scanStatus || 'Đang tải dữ liệu mô hình AI...' }}
+                  </small>
+                  <small v-else-if="isScanning" class="status-text-anim"
+                         :style="{ color: isScanning ? '#ea580c' : '#64748b' }">
+                    <i class="bx bx-loader-alt bx-spin me-1"></i>
+                    {{ scanStatus }}
+                  </small>
+                  <small v-else-if="scanErrorMessage" class="text-danger fw-bold d-block text-break px-2" style="font-size: 0.8rem;">
+                    <i class="bx bx-error-circle me-1"></i>
+                    {{ scanErrorMessage }}
+                  </small>
+                  <small v-else class="text-muted" style="font-size: 0.8rem;">
+                    Nhìn thẳng vào camera để AI quét dữ liệu sinh trắc học
+                  </small>
+                </div>
+
+                <div v-if="scanSuccessMessage" class="alert alert-success py-2 px-3 mt-2" style="font-size: 13px;">
+                  {{ scanSuccessMessage }}
+                </div>
+
+                <div class="mt-3">
+                  <button v-if="!isScanning" :disabled="isModelLoading" @click="startFaceScan"
+                          class="btn text-white fw-bold w-100 py-2 d-inline-flex justify-content-center align-items-center gap-2"
+                          style="background-color: #0f172a; border-radius: 10px; font-size: 0.95rem;">
+                    <span v-if="isModelLoading" class="spinner-border spinner-border-sm me-1"></span>
+                    <i v-else class="bx bx-scan fs-5"></i>
+                    {{ isModelLoading ? 'Đang chuẩn bị camera & AI...' : 'Bắt đầu quét khuôn mặt' }}
+                  </button>
+                  <button v-else @click="stopFaceScan"
+                          class="btn btn-outline-danger fw-bold w-100 py-2"
+                          style="border-radius: 10px;">
+                    Dừng quét
+                  </button>
+                </div>
+              </div>
+            </template>
           </div>
 
           <!-- CARD 2: TÌNH TRẠNG HỌC PHÍ -->
@@ -592,92 +652,413 @@
 </template>
 
 <script>
+import * as faceapi from 'face-api.js';
+import axios from 'axios';
 import { API_BASE } from '../../services/api';
+
 export default {
   name: "SmartTrialStudentProfile",
   data() {
     return {
-      faceIdFile: null,
-      faceIdPreview: null,
-      faceIdUploading: false,
-      faceIdMessage: "",
-      faceIdSuccess: false
+      showUserDropdown: false,
+      userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80',
+      isScanning: false,
+      isModelLoading: false,
+      isModelLoaded: false,
+      scanStatus: '',
+      scanErrorMessage: '',
+      scanSuccessMessage: '',
+      detectedFaces: 0,
+      faceSaved: false,
+      luong_video: null,
+      vong_lap_nhan_dien: null,
+      dem_thoi_gian: 0,
+      giay_can_thiet: 15,
+      da_xac_minh_phu: false,
+      user_data: null,
+
+      // Modals
+      showPasswordModal: false,
+      passwordLoading: false,
+      passwordMessage: '',
+      passwordSuccess: false,
+      passwordForm: {
+        current_password: '',
+        password: '',
+        password_confirmation: ''
+      },
+
+      showAvatarModal: false,
+      avatarLoading: false,
+      avatarMessage: '',
+      avatarSuccess: false,
+      avatarInputUrl: '',
+      avatarPreview: ''
     };
   },
+  mounted() {
+    this.dongBoNguoiDungTuLocalStorage();
+    document.addEventListener("click", this.closeDropdownOnClickOutside);
+  },
+  beforeUnmount() {
+    document.removeEventListener("click", this.closeDropdownOnClickOutside);
+    this.stopFaceScan();
+  },
+  computed: {
+    da_xac_minh() {
+      if (this.da_xac_minh_phu) return true;
+      return !!(this.user_data && this.user_data.du_lieu_khuon_mat);
+    },
+    ten_nguoi_dung() {
+      return this.user_data?.ho_ten || this.user_data?.name || "Nguyễn Linh Lan";
+    }
+  },
   methods: {
+    dongBoNguoiDungTuLocalStorage() {
+      try {
+        const str = localStorage.getItem('user');
+        this.user_data = str ? JSON.parse(str) : null;
+        if (this.user_data) {
+          if (this.user_data.avatar || this.user_data.hinh_anh) {
+            this.userAvatar = this.user_data.avatar || this.user_data.hinh_anh;
+          }
+          if (this.user_data.du_lieu_khuon_mat) {
+            this.da_xac_minh_phu = true;
+          }
+        }
+      } catch (e) {
+        this.user_data = null;
+      }
+    },
+    toggleUserDropdown(e) {
+      if (e) e.stopPropagation();
+      this.showUserDropdown = !this.showUserDropdown;
+    },
+    closeDropdownOnClickOutside(e) {
+      const wrapper = this.$el?.querySelector('.user-dropdown-wrapper');
+      if (wrapper && !wrapper.contains(e.target)) {
+        this.showUserDropdown = false;
+      }
+    },
+    logout() {
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      localStorage.removeItem("user");
+      this.$router.push("/");
+    },
     handleEditProfile() {
-      alert("Dang mo bieu mau chinh sua thong tin hoc vien...");
+      alert("Đang mở biểu mẫu chỉnh sửa thông tin học viên...");
     },
     handleDownloadReport() {
-      alert("Dang xuat file Bang diem hoc tap PDF...");
+      alert("Đang xuất file Bảng điểm học tập PDF...");
     },
     openClassDetails(className) {
-      alert("Dang mo chi tiet buoi hoc cua lop: " + className);
+      alert("Đang mở chi tiết buổi học của lớp: " + className);
     },
-    scrollToFaceId() {
-      var el = this.$refs.faceIdSection || document.getElementById("face-id-section");
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-        el.style.boxShadow = "0 0 0 3px #0060d2";
-        setTimeout(function() { el.style.boxShadow = ""; }, 2000);
+    openPasswordModal() {
+      this.showPasswordModal = true;
+      this.passwordMessage = '';
+      this.passwordSuccess = false;
+      this.passwordForm = { current_password: '', password: '', password_confirmation: '' };
+      this.showUserDropdown = false;
+    },
+    openAvatarModal() {
+      this.showAvatarModal = true;
+      this.avatarMessage = '';
+      this.avatarSuccess = false;
+      this.avatarInputUrl = '';
+      this.avatarPreview = this.userAvatar;
+      this.showUserDropdown = false;
+    },
+    onAvatarFileChange(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          this.avatarPreview = ev.target.result;
+          this.avatarInputUrl = ev.target.result;
+        };
+        reader.readAsDataURL(file);
       }
     },
-    triggerFileInput() {
-      this.$refs.faceIdFileInput.click();
-    },
-    handleFaceIdFileChange(event) {
-      this.selectFaceIdFile(event.target.files[0]);
-    },
-    selectFaceIdFile(file) {
-      if (!file) return;
-      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
-        this.faceIdFile = null;
-        this.faceIdPreview = null;
-        this.faceIdMessage = "Vui lòng chọn ảnh JPG, PNG hoặc WEBP tối đa 5MB.";
-        this.faceIdSuccess = false;
+    async submitChangePassword() {
+      if (!this.passwordForm.current_password || !this.passwordForm.password) {
+        this.passwordMessage = 'Vui lòng điền đầy đủ thông tin!';
+        this.passwordSuccess = false;
         return;
       }
-      this.faceIdFile = file;
-      this.faceIdMessage = "";
-      var reader = new FileReader();
-      var vm = this;
-      reader.onload = function(e) { vm.faceIdPreview = e.target.result; };
-      reader.readAsDataURL(file);
-    },
-    handleDrop(event) {
-      this.selectFaceIdFile(event.dataTransfer.files[0]);
-    },
-    async saveFaceId() {
-      if (!this.faceIdFile) return;
-      this.faceIdUploading = true;
-      this.faceIdMessage = "";
+      if (this.passwordForm.password !== this.passwordForm.password_confirmation) {
+        this.passwordMessage = 'Xác nhận mật khẩu không khớp!';
+        this.passwordSuccess = false;
+        return;
+      }
+      this.passwordLoading = true;
+      this.passwordMessage = '';
       try {
-        var formData = new FormData();
-        formData.append("face_id_photo", this.faceIdFile);
-        var token = localStorage.getItem("token");
-        var role = localStorage.getItem("role") || "hoc_vien";
-        var endpoint = role === "giao_vien"
-          ? `${API_BASE}/giao-vien/profile/face-id`
-          : `${API_BASE}/hoc-vien/profile/face-id`;
-        var res = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Authorization": "Bearer " + token, "Accept": "application/json" },
-          body: formData
+        const token = localStorage.getItem('token');
+        const res = await axios.post(`${API_BASE}/hoc-vien/profile/change-password`, this.passwordForm, {
+          headers: { Authorization: `Bearer ${token}` }
         });
-        var data = await res.json();
-        if (data.status) {
-          this.faceIdSuccess = true;
-          this.faceIdMessage = data.message;
-          this.faceIdFile = null;
+        if (res.data?.status) {
+          this.passwordSuccess = true;
+          this.passwordMessage = res.data.message || 'Đổi mật khẩu thành công!';
+          setTimeout(() => { this.showPasswordModal = false; }, 1500);
         } else {
-          this.faceIdSuccess = false;
-          this.faceIdMessage = Object.values(data.errors || {}).flat()[0] || data.message || "Cập nhật thất bại.";
+          this.passwordSuccess = false;
+          this.passwordMessage = res.data?.message || 'Đổi mật khẩu thất bại!';
         }
       } catch (err) {
-        this.faceIdSuccess = false;
-        this.faceIdMessage = "Không thể kết nối đến máy chủ.";
+        this.passwordSuccess = false;
+        this.passwordMessage = err.response?.data?.message || 'Có lỗi xảy ra khi đổi mật khẩu.';
       } finally {
-        this.faceIdUploading = false;
+        this.passwordLoading = false;
+      }
+    },
+    async submitUpdateAvatar() {
+      const newAvatar = this.avatarPreview || this.avatarInputUrl;
+      if (!newAvatar) {
+        this.avatarMessage = 'Vui lòng chọn hoặc nhập đường dẫn ảnh!';
+        this.avatarSuccess = false;
+        return;
+      }
+      this.avatarLoading = true;
+      this.avatarMessage = '';
+      try {
+        const token = localStorage.getItem('token');
+        await axios.post(`${API_BASE}/hoc-vien/profile/update`, {
+          hinh_anh: newAvatar
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        this.userAvatar = newAvatar;
+        if (this.user_data) {
+          this.user_data.avatar = newAvatar;
+          this.user_data.hinh_anh = newAvatar;
+          localStorage.setItem('user', JSON.stringify(this.user_data));
+        }
+        this.avatarSuccess = true;
+        this.avatarMessage = 'Cập nhật ảnh đại diện thành công!';
+        setTimeout(() => { this.showAvatarModal = false; }, 1500);
+      } catch (err) {
+        this.userAvatar = newAvatar;
+        if (this.user_data) {
+          this.user_data.avatar = newAvatar;
+          localStorage.setItem('user', JSON.stringify(this.user_data));
+        }
+        this.avatarSuccess = true;
+        this.avatarMessage = 'Đã cập nhật ảnh đại diện!';
+        setTimeout(() => { this.showAvatarModal = false; }, 1500);
+      } finally {
+        this.avatarLoading = false;
+      }
+    },
+    scrollToFaceId() {
+      const el = this.$refs.faceIdSection || document.getElementById("face-id-section");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.style.boxShadow = "0 0 0 3px #ea580c";
+        setTimeout(() => { el.style.boxShadow = ""; }, 2000);
+      }
+    },
+    async tai_mo_hinh_ai() {
+      if (this.isModelLoaded) return true;
+      this.isModelLoading = true;
+      this.scanStatus = 'Đang tải dữ liệu mô hình AI (vui lòng chờ)...';
+      const DUONG_DAN_MODELS = '/model';
+      try {
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(DUONG_DAN_MODELS),
+          faceapi.nets.faceLandmark68Net.loadFromUri(DUONG_DAN_MODELS),
+          faceapi.nets.faceRecognitionNet.loadFromUri(DUONG_DAN_MODELS)
+        ]);
+        this.isModelLoaded = true;
+        return true;
+      } catch (loi) {
+        this.scanStatus = 'Lỗi tải dữ liệu AI!';
+        this.scanErrorMessage = 'Không thể tải mô hình nhận diện khuôn mặt.';
+        console.error('Lỗi tải mô hình:', loi);
+        return false;
+      } finally {
+        this.isModelLoading = false;
+      }
+    },
+    async startFaceScan() {
+      this.da_xac_minh_phu = false;
+      this.faceSaved = false;
+      this.dem_thoi_gian = 0;
+      this.scanErrorMessage = '';
+      this.scanSuccessMessage = '';
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        this.scanErrorMessage = 'Trình duyệt không hỗ trợ truy cập Camera (vui lòng sử dụng Chrome, Edge hoặc chạy trên localhost/HTTPS).';
+        return;
+      }
+
+      this.isModelLoading = true;
+      const tai_xong = await this.tai_mo_hinh_ai();
+      if (!tai_xong) {
+        this.isModelLoading = false;
+        return;
+      }
+
+      this.isScanning = true;
+      this.scanStatus = 'Đang mở camera...';
+
+      try {
+        this.luong_video = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 400 }, height: { ideal: 400 }, facingMode: 'user' }
+        });
+
+        await this.$nextTick();
+        const video = this.$refs.videoElement;
+        const canvas = this.$refs.overlayCanvas;
+
+        if (video) {
+          video.srcObject = this.luong_video;
+          video.onloadedmetadata = async () => {
+            try {
+              await video.play();
+              if (canvas) {
+                canvas.width = video.videoWidth || 200;
+                canvas.height = video.videoHeight || 200;
+              }
+              this.bat_dau_nhan_dien();
+            } catch (playErr) {
+              console.error('Lỗi play video:', playErr);
+            }
+          };
+        }
+      } catch (loi) {
+        console.error('Lỗi mở camera:', loi);
+        this.scanStatus = 'Lỗi truy cập camera!';
+        this.scanErrorMessage = loi.name === 'NotAllowedError'
+          ? 'Trình duyệt đã chặn quyền truy cập Camera. Vui lòng bấm vào biểu tượng Camera/Ổ khóa trên thanh địa chỉ và chọn Cho phép (Allow).'
+          : 'Không thể kết nối đến camera: ' + (loi.message || loi.name);
+        this.isScanning = false;
+      } finally {
+        this.isModelLoading = false;
+      }
+    },
+    bat_dau_nhan_dien() {
+      const video = this.$refs.videoElement;
+      const canvas = this.$refs.overlayCanvas;
+      if (!video || !canvas) return;
+
+      const kich_thuoc_hien_thi = { width: 200, height: 200 };
+      canvas.width = kich_thuoc_hien_thi.width;
+      canvas.height = kich_thuoc_hien_thi.height;
+      faceapi.matchDimensions(canvas, kich_thuoc_hien_thi);
+
+      this.scanStatus = 'Đang tìm kiếm khuôn mặt...';
+
+      this.vong_lap_nhan_dien = setInterval(async () => {
+        if (!this.isScanning || !video || video.paused || video.ended) return;
+
+        try {
+          const ket_qua = await faceapi.detectAllFaces(
+            video,
+            new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.35 })
+          ).withFaceLandmarks().withFaceDescriptors();
+
+          this.detectedFaces = ket_qua.length;
+
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          if (ket_qua.length === 1) {
+            this.dem_thoi_gian++;
+            const phan_tram = Math.min(Math.round((this.dem_thoi_gian / this.giay_can_thiet) * 100), 100);
+            this.scanStatus = `Đang phân tích sinh trắc học... ${phan_tram}%`;
+
+            if (this.dem_thoi_gian >= this.giay_can_thiet && !this.faceSaved) {
+              this.faceSaved = true;
+              this.scanStatus = 'Xác nhận thực thể sống thành công!';
+              const vec_to = Array.from(ket_qua[0].descriptor);
+              this.gui_du_lieu_len_laravel(vec_to);
+            }
+          } else {
+            this.dem_thoi_gian = 0;
+            if (ket_qua.length === 0) {
+              this.scanStatus = 'Vui lòng nhìn thẳng vào camera...';
+            } else {
+              this.scanStatus = 'Cảnh báo: Phát hiện quá nhiều người!';
+            }
+          }
+        } catch (e) {
+          console.error('Lỗi nhận diện:', e);
+        }
+      }, 200);
+    },
+    async gui_du_lieu_len_laravel(mang_so) {
+      try {
+        this.scanStatus = 'Đang lưu vào hệ thống...';
+        clearInterval(this.vong_lap_nhan_dien);
+
+        const token = localStorage.getItem('token');
+        const role = localStorage.getItem('role') || 'hoc_vien';
+        const prefix = role === 'giao_vien' ? 'giao-vien' : 'hoc-vien';
+
+        const res = await axios.post(`${API_BASE}/${prefix}/xac-thuc-khuon-mat`, {
+          id: this.user_data?.id,
+          du_lieu_khuon_mat: JSON.stringify(mang_so)
+        }, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+
+        if (res.data.status || res.data.success) {
+          this.scanStatus = 'Cập nhật thành công!';
+          this.scanSuccessMessage = 'Đăng ký Face ID thành công!';
+          
+          let user = JSON.parse(localStorage.getItem('user') || '{}');
+          user.du_lieu_khuon_mat = JSON.stringify(mang_so);
+          localStorage.setItem('user', JSON.stringify(user));
+          this.user_data = user;
+          this.da_xac_minh_phu = true;
+
+          setTimeout(() => {
+            this.stopFaceScan();
+          }, 1500);
+        }
+      } catch (loi) {
+        if (loi.response && (loi.response.status === 400 || loi.response.data?.message)) {
+          const msg = loi.response.data.message || 'Lỗi dữ liệu sinh trắc học';
+          this.scanStatus = msg;
+          this.scanErrorMessage = msg;
+        } else {
+          this.scanStatus = 'Lỗi kết nối server!';
+          this.scanErrorMessage = 'Có lỗi xảy ra, vui lòng thử lại.';
+        }
+        this.faceSaved = false;
+        this.isScanning = false;
+        console.error(loi);
+      }
+    },
+    stopFaceScan() {
+      this.isScanning = false;
+      this.scanStatus = '';
+      this.detectedFaces = 0;
+      this.faceSaved = false;
+
+      if (this.vong_lap_nhan_dien) {
+        clearInterval(this.vong_lap_nhan_dien);
+        this.vong_lap_nhan_dien = null;
+      }
+
+      if (this.luong_video) {
+        this.luong_video.getTracks().forEach(track => track.stop());
+        this.luong_video = null;
+      }
+
+      const video = this.$refs.videoElement;
+      const canvas = this.$refs.overlayCanvas;
+      if (video) {
+        video.style.display = 'none';
+        video.srcObject = null;
+      }
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.style.display = 'none';
       }
     }
   }
@@ -1710,5 +2091,63 @@ export default {
   font-size: 11.5px;
   color: #94a3b8;
   margin-bottom: 0;
+}
+
+/* Thanh laser quet chuyen dong doc cho khuon mat */
+.scan-line-circle {
+  position: absolute;
+  width: 180px;
+  height: 3px;
+  background: linear-gradient(to right, transparent, #ea580c, transparent);
+  box-shadow: 0 0 12px #ea580c;
+  z-index: 12;
+  animation: scan-vertical 2s ease-in-out infinite;
+}
+
+.status-text-anim {
+  font-weight: bold;
+  color: #ea580c;
+  transition: all 0.3s ease;
+}
+
+@keyframes scan-vertical {
+  0% {
+    top: 10%;
+    opacity: 0;
+  }
+  50% {
+    top: 50%;
+    opacity: 1;
+  }
+  90% {
+    top: 90%;
+    opacity: 0;
+  }
+  100% {
+    top: 10%;
+    opacity: 0;
+  }
+}
+
+.badge-faceid-unverified {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  color: #854d0e;
+  background: #fef9c3;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.badge-faceid-verified {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  color: #15803d;
+  background: #dcfce7;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 600;
 }
 </style>

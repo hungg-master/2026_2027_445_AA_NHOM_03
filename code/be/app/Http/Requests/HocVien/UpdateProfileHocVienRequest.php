@@ -15,10 +15,11 @@ class UpdateProfileHocVienRequest extends FormRequest
     {
         return [
             'ho_ten'        => 'required|string|max:100|min:2',
-            'so_dien_thoai' => 'required|digits:10',
+            'so_dien_thoai' => 'required',
             'ngay_sinh'     => 'nullable|date',
-            'gioi_tinh'     => 'nullable|integer',
+            'gioi_tinh'     => 'nullable',
             'dia_chi'       => 'nullable|string',
+            'hinh_anh'      => 'nullable|string',
         ];
     }
 

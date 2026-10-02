@@ -1,42 +1,6 @@
-﻿<template>
+<template>
   <div class="edulink-page">
-    <!-- 1. HEADER / NAVBAR -->
-    <header class="edulink-header">
-      <div class="header-container">
-        <!-- Logo -->
-        <div class="header-left">
-          <router-link to="/my-schedule" class="brand-logo">EduLink</router-link>
-        </div>
-
-        <!-- Navigation Links -->
-        <nav class="header-nav">
-          <a href="javascript:void(0)" class="nav-item">Search for tutors</a>
-          <router-link to="/my-schedule" class="nav-item active">My Schedule</router-link>
-          <router-link to="/my-classes" class="nav-item">My Classes</router-link>
-        </nav>
-
-        <!-- Right User Actions -->
-        <div class="header-right">
-          <!-- Notification Bell -->
-          <button class="icon-btn" title="Notifications">
-            <i class="fa-regular fa-bell"></i>
-          </button>
-
-          <!-- Logout Link -->
-          <router-link to="/logout" class="logout-link">Logout</router-link>
-
-          <!-- User Avatar -->
-          <div class="user-avatar">
-            <img
-              src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80"
-              alt="User profile"
-            />
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <!-- 2. MAIN CONTENT -->
+    <!-- MAIN CONTENT -->
     <main class="main-content">
       <div class="content-container">
         <!-- Title & Subtitle -->
@@ -60,11 +24,11 @@
                 <div class="schedule-legend">
                   <div class="legend-item">
                     <span class="legend-dot available"></span>
-                    <span class="legend-text">Available</span>
+                    <span class="legend-text">Trống</span>
                   </div>
                   <div class="legend-item">
-                    <span class="legend-dot selected"></span>
-                    <span class="legend-text">Selected</span>
+                    <span class="legend-tick"><i class="fa-solid fa-check"></i></span>
+                    <span class="legend-text">Đã chọn</span>
                   </div>
                 </div>
               </div>
@@ -74,14 +38,13 @@
                 <table class="calendar-table">
                   <thead>
                     <tr>
-                      <th class="time-col-header">Time</th>
+                      <th class="time-col-header">Thời gian</th>
                       <th
                         v-for="(day, index) in days"
                         :key="day"
                         :class="['day-col-header', { 'active-day': day === 'Thu' }]"
                       >
                         <div class="day-name">{{ dayLabels[index] }}</div>
-                        
                       </th>
                     </tr>
                   </thead>
@@ -97,9 +60,9 @@
                         :class="['slot-cell', { 'is-selected': isSelected(day, time) }]"
                         @click="toggleSlot(day, time)"
                       >
-                        <span v-if="isSelected(day, time)" class="selected-badge">
-                          Selected
-                        </span>
+                        <div v-if="isSelected(day, time)" class="selected-tick-wrapper">
+                          <i class="fa-solid fa-check check-icon"></i>
+                        </div>
                       </td>
                     </tr>
                   </tbody>
@@ -128,31 +91,13 @@
         </div>
       </div>
     </main>
-
-    <!-- 3. FOOTER -->
-    <footer class="edulink-footer">
-      <div class="footer-container">
-        <!-- Bên trái: Logo & Bản quyền -->
-        <div class="footer-left">
-          <div class="footer-brand">EduLink</div>
-          <p class="footer-copyright">
-            © 2024 EduLink. Bridging the gap between educators and students.
-          </p>
-        </div>
-
-        <!-- Bên phải: Các liên kết phụ -->
-        <div class="footer-links">
-          <a href="javascript:void(0)" class="footer-link">Contact info</a>
-          <a href="javascript:void(0)" class="footer-link">FAQ</a>
-          <a href="javascript:void(0)" class="footer-link">Terms</a>
-        </div>
-      </div>
-    </footer>
   </div>
 </template>
 
 <script>
 import { API_BASE } from '../../services/api';
+import profileService from '../../services/profileService';
+
 export default {
   name: "TrialBooking",
   data() {
@@ -183,8 +128,47 @@ export default {
     } else {
       this.form.subject = "Học thử Tổng quát";
     }
+    this.loadUserInfo();
   },
   methods: {
+    loadUserInfo() {
+      // 1. Tự động lấy thông tin user đã lưu trong localStorage
+      const userStr = localStorage.getItem("user") || localStorage.getItem("edulink_user");
+      if (userStr) {
+        try {
+          const u = JSON.parse(userStr);
+          if (u) {
+            if (u.ho_ten || u.name) {
+              this.form.name = u.ho_ten || u.name;
+            }
+            const phone = u.so_dien_thoai || u.phone || u.sdt;
+            if (phone) {
+              this.form.phone = phone;
+            }
+          }
+        } catch (e) {}
+      }
+
+      // 2. Lấy dữ liệu mới nhất từ CSDL qua profileService nếu đã đăng nhập
+      const token = localStorage.getItem("token") || localStorage.getItem("edulink_token");
+      if (token) {
+        const role = localStorage.getItem("role") || "hoc_vien";
+        profileService.getProfile(role)
+          .then((res) => {
+            const u = res?.data || res;
+            if (u) {
+              if (u.ho_ten || u.name) {
+                this.form.name = u.ho_ten || u.name;
+              }
+              const phone = u.so_dien_thoai || u.phone || u.sdt;
+              if (phone) {
+                this.form.phone = phone;
+              }
+            }
+          })
+          .catch(() => {});
+      }
+    },
     getSlotId(day, time) {
       return `${day}_${time}`;
     },
@@ -258,115 +242,7 @@ export default {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* ================= 1. HEADER / NAVBAR ================= */
-.edulink-header {
-  background-color: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
 
-.header-container {
-  max-width: 1260px;
-  margin: 0 auto;
-  padding: 0 28px;
-  height: 68px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-/* Logo */
-.brand-logo {
-  font-size: 23px;
-  font-weight: 800;
-  color: #0060d2;
-  text-decoration: none;
-  letter-spacing: -0.5px;
-}
-
-/* Menu điều hướng giữa */
-.header-nav {
-  display: flex;
-  align-items: center;
-  gap: 36px;
-  height: 100%;
-}
-
-.header-nav .nav-item {
-  text-decoration: none;
-  font-size: 14.5px;
-  font-weight: 500;
-  color: #475569;
-  height: 68px;
-  display: inline-flex;
-  align-items: center;
-  border-bottom: 2.5px solid transparent;
-  transition: all 0.2s ease;
-}
-
-.header-nav .nav-item:hover {
-  color: #0060d2;
-}
-
-.header-nav .nav-item.active {
-  color: #0060d2;
-  font-weight: 600;
-  border-bottom-color: #0060d2;
-}
-
-/* Actions bên phải */
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.icon-btn {
-  background: transparent;
-  border: none;
-  font-size: 18px;
-  color: #475569;
-  cursor: pointer;
-  padding: 6px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s;
-}
-
-.icon-btn:hover {
-  color: #0060d2;
-}
-
-.logout-link {
-  font-size: 14px;
-  font-weight: 500;
-  color: #475569;
-  text-decoration: none;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
-.logout-link:hover {
-  color: #ef4444;
-}
-
-.user-avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  overflow: hidden;
-  border: 2px solid #e2e8f0;
-}
-
-.user-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
 
 /* ================= 2. MAIN CONTENT ================= */
 .main-content {
@@ -466,14 +342,15 @@ export default {
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12.5px;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
   color: #475569;
 }
 
 .legend-dot {
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
 }
 
@@ -481,8 +358,16 @@ export default {
   background-color: #e2e8f0;
 }
 
-.legend-dot.selected {
+.legend-tick {
+  width: 18px;
+  height: 18px;
   background-color: #0060d2;
+  color: #ffffff;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
 }
 
 /* Bảng thời gian (Calendar Table) */
@@ -548,25 +433,52 @@ export default {
   background-color: #ffffff;
   cursor: pointer;
   vertical-align: middle;
-  transition: background-color 0.15s ease;
+  text-align: center;
+  transition: all 0.15s ease;
   position: relative;
-  padding: 6px;
+  padding: 0;
+  user-select: none;
 }
 
 .slot-cell:hover:not(.is-selected) {
-  background-color: #f1f5f9;
+  background-color: #eff6ff;
 }
 
 /* Ô đã được chọn: Màu xanh đậm đặc trưng */
 .slot-cell.is-selected {
   background-color: #0060d2;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
-.selected-badge {
+.slot-cell.is-selected:hover {
+  background-color: #0052b3;
+}
+
+/* Wrapper dấu tích (Tick mark) */
+.selected-tick-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.check-icon {
   color: #ffffff;
-  font-size: 12px;
-  font-weight: 600;
-  user-select: none;
+  font-size: 20px;
+  font-weight: 900;
+  animation: tickPop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes tickPop {
+  0% {
+    transform: scale(0.35);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* --- CỘT PHẢI: GỢI Ý GIA SƯ (SUGGESTED TUTORS) --- */
@@ -710,53 +622,7 @@ export default {
   box-shadow: 0 4px 12px rgba(0, 96, 210, 0.25);
 }
 
-/* ================= 3. FOOTER ================= */
-.edulink-footer {
-  background-color: #ffffff;
-  border-top: 1px solid #e2e8f0;
-  padding: 40px 24px;
-  margin-top: auto;
-}
 
-.footer-container {
-  max-width: 1260px;
-  margin: 0 auto;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.footer-brand {
-  font-size: 18px;
-  font-weight: 800;
-  color: #0f172a;
-  margin-bottom: 6px;
-}
-
-.footer-copyright {
-  font-size: 13px;
-  color: #64748b;
-  margin-bottom: 0;
-  max-width: 300px;
-  line-height: 1.5;
-}
-
-.footer-links {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.footer-link {
-  font-size: 13.5px;
-  color: #475569;
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.footer-link:hover {
-  color: #0060d2;
-}
 
 /* ================= RESPONSIVE ================= */
 @media (max-width: 991px) {
