@@ -1,10 +1,37 @@
-đồ án nhóm 3[nhóm3 mô tả.txt](https://github.com/user-attachments/files/31217253/nhom3.mo.t.txt)
-đây là một hệ thống giúp liên kết giữa học sinh và giáo viên,những người cần đặt lịch học để học các môn vào những thời gian cụ thể ,sẽ có giáo viên tương ứng phù hợp sẽ được gợi ý sao cho phù hợp với học sinh
+# Bộ file riêng SmartTrial chỉnh sửa lần 2
 
-1/người đăng kí học hay người dùng sẽ chọn các thời gian rảnh của mình sau đó hệ thống sẽ đề xuất các giáo viên phù hợp cho thời gian rảnh của mình,mình sẽ có thể chọn giáo viên nào sẽ dạy mình buổi đó
+**Bộ dùng cho lượt duyệt hiện tại: 16 Word và 4 Excel trong folder này.** Mỗi tài liệu chỉ giữ một bản, dùng tên không có `(1)`. Giữ các nhóm tài liệu của `BaoCao`, bổ sung file Use Case; sửa trên khung nội dung gốc. Tên SmartTrial, bắt đầu 19/08/2026, phạm vi theo Proposal.
 
-2/1 giáo viên sẽ có nhiều lớp giáo viên có thể chọn dạy lớp đại trà hoặc lớp kèm,trong nhóm lớp kèm sẽ có 1 lớp là 1 kèm 1 hoặc lớp kèm 5 người và lớp này sẽ không được quá 5 người
+Xem [Báo cáo chỉnh sửa 2](Báo%20cáo%20chỉnh%20sửa%202.md) để biết các phần đã sửa và dữ liệu còn cần chốt. Báo cáo và README là hướng dẫn nội bộ; các Word/Excel là hồ sơ riêng để chuẩn bị nộp.
 
-3/trước khi vào lớp học nếu học sinh học off thì sẽ có mail thông báo buổi học khi nào địa chỉ ở đâu,còn nếu học onl thì cũng sẽ có mail và khi học onl sẽ có quét face id để mở vào lớp học
+| Word | Trang trong bản xuất kiểm tra |
+|---|---:|
+| [0.Mở đầu](0.Mở%20đầu.docx) | 4 |
+| [1.Proposal-ver.1.0.1](1.Proposal-ver.1.0.1.docx) | 21 |
+| [2.ProjectPlan_v1.1](2.ProjectPlan_v1.1.docx) | 31 |
+| [3.UserStory-ver1.1](3.UserStory-ver1.1.docx) | 20 |
+| [4.ProductBacklog](4.ProductBacklog.docx) | 26 |
+| [5.Architecture](5.Architecture.docx) | 16 |
+| [6.UserInterfaceDesign](6.UserInterfaceDesign.docx) | 61 |
+| [7.Database](7.Database.docx) | 27 |
+| [8.TestPlan](8.TestPlan.docx) | 14 |
+| [9.0.Bia_TestCase](9.0.Bia_TestCase.docx) | 184 |
+| [10.0.TestReport](10.0.TestReport.docx) | 9 |
+| [11.0.Bia_Sprint BackLog](11.0.Bia_Sprint%20BackLog.docx) | 37 |
+| [12.MeetingReport](12.MeetingReport.docx) | 25 |
+| [13.ConfigurationManagement](13.ConfigurationManagement.docx) | 9 |
+| [14.Reflection](14.Reflection.docx) | 7 |
+| [15.UseCase](15.UseCase.docx) | 35 |
 
-4/học sinh có thể thanh toán học phí onl và hệ thống sẽ gửi thông báo về mail cho học sinh khi đã thanh toán xong,nếu học sinh chưa thanh toán hệ thốn sẽ gửi mail thông báo cho học sinh biết số tiền cần phải nộp 
+Excel được giữ riêng đúng nhóm tài liệu nguồn, mỗi tài liệu một bản:
+
+- [9.1.TestCaseSprint1](9.1.TestCaseSprint1.xlsx).
+- [9.2.TestCaseSprint2](9.2.TestCaseSprint2.xlsx).
+- [10.TestReport](10.TestReport.xlsx).
+- [11.SprintBacklog](11.SprintBacklog.xlsx).
+
+Tài liệu CSDL đối chiếu: [SQL hiện có](ThietKeCSDL/schema_hien_co.sql), [drawio hiện có](ThietKeCSDL/schema_hien_co.drawio), [SQL thiết kế đích](ThietKeCSDL/schema_dich.sql), [drawio thiết kế đích](ThietKeCSDL/schema_dich.drawio).
+
+Giữ cả folder khi sao chép để các liên kết Word còn hoạt động. Bản `BaoCao` và code không bị sửa; bản tổng hợp ở `BaoCaoChinhSua` được giữ để tham khảo lịch sử. Các kết quả/thông số thiếu căn cứ được giữ nguồn hoặc để trống, ghi riêng trong báo cáo chỉnh sửa.
+
+Bốn bản phụ (1) được lưu nguyên trong folder `BaoCaoBanPhuLuuLai` ở ngoài cùng dự án để đối chiếu. Folder chuẩn bị nộp này chỉ giữ một bản cho mỗi tài liệu.
