@@ -1,37 +1,47 @@
-# Bộ file riêng SmartTrial chỉnh sửa lần 2
+# Bộ báo cáo chính SmartTrial
 
-**Bộ dùng cho lượt duyệt hiện tại: 16 Word và 4 Excel trong folder này.** Mỗi tài liệu chỉ giữ một bản, dùng tên không có `(1)`. Giữ các nhóm tài liệu của `BaoCao`, bổ sung file Use Case; sửa trên khung nội dung gốc. Tên SmartTrial, bắt đầu 19/08/2026, phạm vi theo Proposal.
+`BaoCao/` chứa **16 tài liệu Word và 4 bảng tính Excel** làm bộ báo cáo chính. Bộ này dùng các file không có `(1)`, được cập nhật ngày **04/10/2026** trong commit `91ef3fc` ("Báo cáo final").
 
-Xem [Báo cáo chỉnh sửa 2](Báo%20cáo%20chỉnh%20sửa%202.md) để biết các phần đã sửa và dữ liệu còn cần chốt. Báo cáo và README là hướng dẫn nội bộ; các Word/Excel là hồ sơ riêng để chuẩn bị nộp.
+Bốn bản phụ có `(1)` được giữ nguyên nội dung tại [BaoCaoBanPhuLuuLai](../BaoCaoBanPhuLuuLai/README.md) để đối chiếu lịch sử. Khi chuẩn bị nộp hoặc tiếp tục chỉnh sửa, dùng các tài liệu trong `BaoCao/`.
 
-| Word | Trang trong bản xuất kiểm tra |
-|---|---:|
-| [0.Mở đầu](0.Mở%20đầu.docx) | 4 |
-| [1.Proposal-ver.1.0.1](1.Proposal-ver.1.0.1.docx) | 21 |
-| [2.ProjectPlan_v1.1](2.ProjectPlan_v1.1.docx) | 31 |
-| [3.UserStory-ver1.1](3.UserStory-ver1.1.docx) | 20 |
-| [4.ProductBacklog](4.ProductBacklog.docx) | 26 |
-| [5.Architecture](5.Architecture.docx) | 16 |
-| [6.UserInterfaceDesign](6.UserInterfaceDesign.docx) | 61 |
-| [7.Database](7.Database.docx) | 27 |
-| [8.TestPlan](8.TestPlan.docx) | 14 |
-| [9.0.Bia_TestCase](9.0.Bia_TestCase.docx) | 184 |
-| [10.0.TestReport](10.0.TestReport.docx) | 9 |
-| [11.0.Bia_Sprint BackLog](11.0.Bia_Sprint%20BackLog.docx) | 37 |
-| [12.MeetingReport](12.MeetingReport.docx) | 25 |
-| [13.ConfigurationManagement](13.ConfigurationManagement.docx) | 9 |
-| [14.Reflection](14.Reflection.docx) | 7 |
-| [15.UseCase](15.UseCase.docx) | 35 |
+## Tài liệu Word
 
-Excel được giữ riêng đúng nhóm tài liệu nguồn, mỗi tài liệu một bản:
+| STT | Tài liệu |
+|---|---|
+| 0 | [Mở đầu](0.Mở%20đầu.docx) |
+| 1 | [Proposal](1.Proposal-ver.1.0.1.docx) |
+| 2 | [Project Plan](2.ProjectPlan_v1.1.docx) |
+| 3 | [User Story](3.UserStory-ver1.1.docx) |
+| 4 | [Product Backlog](4.ProductBacklog.docx) |
+| 5 | [Architecture](5.Architecture.docx) |
+| 6 | [User Interface Design](6.UserInterfaceDesign.docx) |
+| 7 | [Database](7.Database.docx) |
+| 8 | [Test Plan](8.TestPlan.docx) |
+| 9 | [Test Case](9.0.Bia_TestCase.docx) |
+| 10 | [Test Report](10.0.TestReport.docx) |
+| 11 | [Sprint Backlog](11.0.Bia_Sprint%20BackLog.docx) |
+| 12 | [Meeting Report](12.MeetingReport.docx) |
+| 13 | [Configuration Management](13.ConfigurationManagement.docx) |
+| 14 | [Reflection](14.Reflection.docx) |
+| 15 | [Use Case](15.UseCase.docx) |
 
-- [9.1.TestCaseSprint1](9.1.TestCaseSprint1.xlsx).
-- [9.2.TestCaseSprint2](9.2.TestCaseSprint2.xlsx).
-- [10.TestReport](10.TestReport.xlsx).
-- [11.SprintBacklog](11.SprintBacklog.xlsx).
+## Bảng tính Excel
 
-Tài liệu CSDL đối chiếu: [SQL hiện có](ThietKeCSDL/schema_hien_co.sql), [drawio hiện có](ThietKeCSDL/schema_hien_co.drawio), [SQL thiết kế đích](ThietKeCSDL/schema_dich.sql), [drawio thiết kế đích](ThietKeCSDL/schema_dich.drawio).
+- [Test Case Sprint 1](9.1.TestCaseSprint1.xlsx).
+- [Test Case Sprint 2](9.2.TestCaseSprint2.xlsx).
+- [Test Report Sprint 1 và Sprint 2](10.TestReport.xlsx).
+- [Sprint Backlog](11.SprintBacklog.xlsx).
 
-Giữ cả folder khi sao chép để các liên kết Word còn hoạt động. Bản `BaoCao` và code không bị sửa; bản tổng hợp ở `BaoCaoChinhSua` được giữ để tham khảo lịch sử. Các kết quả/thông số thiếu căn cứ được giữ nguồn hoặc để trống, ghi riêng trong báo cáo chỉnh sửa.
+## Cấu trúc lưu trữ
 
-Bốn bản phụ (1) được lưu nguyên trong folder `BaoCaoBanPhuLuuLai` ở ngoài cùng dự án để đối chiếu. Folder chuẩn bị nộp này chỉ giữ một bản cho mỗi tài liệu.
+```text
+BaoCao/                  Bộ báo cáo chính: 16 Word, 4 Excel và README.md
+BaoCaoBanPhuLuuLai/       Bốn bản phụ (1) và README.md hướng dẫn đối chiếu
+code/                    Source code frontend, backend và hướng dẫn chạy
+```
+
+Hướng dẫn chạy hệ thống nằm tại [code/README.md](../code/README.md).
+
+## Báo cáo Word tổng hợp
+
+Repo hiện lưu bộ tài liệu riêng nêu trên; chưa có file `Báo_cáo_nhóm_3-final.docx`. Nếu cần nộp một Word tổng hợp, bổ sung bản gốc đã được duyệt hoặc tạo bản gộp từ bộ báo cáo chính sau khi chốt nội dung.
