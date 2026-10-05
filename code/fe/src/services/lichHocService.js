@@ -7,6 +7,7 @@
  *  - DELETE /api/hoc-vien/huy-dang-ky/{id}
  */
 import http from './http'
+import product from './productService'
 
 export const lichHocService = {
   /** Lấy lịch học theo khoảng ngày */
@@ -20,8 +21,8 @@ export const lichHocService = {
   },
 
   /** Đăng ký lớp mới */
-  dangKyLop(idLopHoc) {
-    return http.post('/hoc-vien/dang-ky-lop-hoc', { id_lop_hoc: idLopHoc })
+  dangKyLop(idLopHoc, verificationId) {
+    return product.enroll(idLopHoc, verificationId)
   },
 
   /** Hủy đăng ký */

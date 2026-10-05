@@ -28,11 +28,11 @@ class LopHocPublicController extends Controller
                 'phongHoc',
                 'giaoVien' => function ($q) {
                     $q->select('id', 'ho_ten', 'chuc_danh', 'so_nam_kinh_nghiem', 'hinh_anh');
-                }
+                },
             ])
                 ->whereIn('tinh_trang', ['sap_mo', 'dang_mo'])
                 ->whereHas('giaoVien', function ($q) {
-                    $q->where('trang_thai_duyet', 'da_duyet');
+                    $q->where('trang_thai_duyet', 'da_duyet')->where('is_block', 0)->where('is_active', 1)->where('tinh_trang', 1);
                 });
 
             if ($request->filled('loai_lop')) {
@@ -55,7 +55,7 @@ class LopHocPublicController extends Controller
                 });
             }
 
-            $perPage = $request->get('per_page', 12);
+            $perPage = max(1, min(100, (int) $request->get('per_page', 12)));
             $data = $query->orderBy('thoi_gian_bat_dau', 'asc')
                 ->paginate($perPage);
 
@@ -70,10 +70,12 @@ class LopHocPublicController extends Controller
                 'data' => $data,
             ]);
         } catch (\Exception $e) {
-            Log::error('Public lop-hoc error: ' . $e->getMessage());
+            report($e);
+            Log::error('Public lop-hoc error: '.$e->getMessage());
+
             return response()->json([
                 'status' => false,
-                'message' => 'Đã có lỗi xảy ra: ' . $e->getMessage(),
+                'message' => 'Không thể xử lý yêu cầu lúc này. Vui lòng thử lại.',
             ], 500);
         }
     }
@@ -85,12 +87,13 @@ class LopHocPublicController extends Controller
     public function show($id)
     {
         try {
-            $lopHoc = LopHoc::with(['monHoc', 'phongHoc', 'giaoVien'])
+            $lopHoc = LopHoc::with(['monHoc', 'phongHoc', 'giaoVien:id,ho_ten,chuc_danh,so_nam_kinh_nghiem,mo_ta,hinh_anh'])
+                ->whereHas('giaoVien', fn ($q) => $q->where('trang_thai_duyet', 'da_duyet')->where('tinh_trang', 1)->where('is_block', 0)->where('is_active', 1))
                 ->where('id', $id)
                 ->whereIn('tinh_trang', ['sap_mo', 'dang_mo', 'dang_hoc', 'da_ket_thuc'])
                 ->first();
 
-            if (!$lopHoc) {
+            if (! $lopHoc) {
                 return response()->json([
                     'status' => false,
                     'message' => 'Không tìm thấy lớp học.',
@@ -105,10 +108,12 @@ class LopHocPublicController extends Controller
                 'data' => $lopHoc,
             ]);
         } catch (\Exception $e) {
-            Log::error('Public show lop-hoc error: ' . $e->getMessage());
+            report($e);
+            Log::error('Public show lop-hoc error: '.$e->getMessage());
+
             return response()->json([
                 'status' => false,
-                'message' => 'Đã có lỗi xảy ra: ' . $e->getMessage(),
+                'message' => 'Không thể xử lý yêu cầu lúc này. Vui lòng thử lại.',
             ], 500);
         }
     }
@@ -130,9 +135,11 @@ class LopHocPublicController extends Controller
                 'data' => $data,
             ]);
         } catch (\Exception $e) {
+            report($e);
+
             return response()->json([
                 'status' => false,
-                'message' => 'Đã có lỗi xảy ra: ' . $e->getMessage(),
+                'message' => 'Không thể xử lý yêu cầu lúc này. Vui lòng thử lại.',
             ], 500);
         }
     }
@@ -151,9 +158,11 @@ class LopHocPublicController extends Controller
                 'data' => $data,
             ]);
         } catch (\Exception $e) {
+            report($e);
+
             return response()->json([
                 'status' => false,
-                'message' => 'Đã có lỗi xảy ra: ' . $e->getMessage(),
+                'message' => 'Không thể xử lý yêu cầu lúc này. Vui lòng thử lại.',
             ], 500);
         }
     }

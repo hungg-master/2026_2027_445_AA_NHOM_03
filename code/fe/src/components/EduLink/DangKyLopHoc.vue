@@ -353,14 +353,7 @@
                   <i class="fa-solid fa-circle-check me-1"></i>Đã xác nhận
                 </span>
                 <div class="d-flex flex-column gap-2 w-100">
-                  <a
-                    v-if="dk.lop_hoc?.link_online"
-                    :href="dk.lop_hoc.link_online"
-                    target="_blank"
-                    class="btn btn-primary btn-sm"
-                  >
-                    <i class="fa-solid fa-video me-1"></i> Vào phòng Meet
-                  </a>
+                  <router-link to="/hoc-vien/lich-hoc" class="btn btn-primary btn-sm">Chọn buổi và vào phòng</router-link>
                   <button
                     class="btn btn-outline-danger btn-sm"
                     @click="handleHuyDangKy(dk)"
@@ -517,14 +510,18 @@
       </div>
     </main>
   </div>
+<div v-if="faceTarget" class="modal-overlay" @click.self="faceTarget = null"><FaceProof purpose="enrollment" :target="{ id_lop_hoc: faceTarget.id }" @verified="completeEnrollment" @cancel="faceTarget = null" /></div>
 </template>
 
 <script>
+import FaceProof from './FaceProof.vue'
+import { dateParts } from '../../services/flowHelpers'
 import { lopHocService } from '../../services/lopHocService'
 import { lichHocService } from '../../services/lichHocService'
 
 export default {
   name: 'DangKyLopHoc',
+  components: { FaceProof },
   data() {
     return {
       loading: false,
@@ -537,6 +534,7 @@ export default {
       filterHinhThuc: '',
       filterLoaiLop: '',
       registeringId: null,
+      faceTarget: null,
       cancellingId: null,
       showConflictModal: false,
       conflictDetails: {
@@ -667,22 +665,7 @@ export default {
     // ========================================================
     // RÀNG BUỘC: 1 MÔN CHỈ ĐĂNG KÝ ĐƯỢC 1 LỚP DUY NHẤT
     // ========================================================
-    hasRegisteredSubjectOtherClass(lop) {
-      if (this.isRegistered(lop.id)) return null
-      const found = this.myRegistrations.find(dk => {
-        return dk.trang_thai !== 'da_huy'
-          && dk.lop_hoc
-          && dk.lop_hoc.id_mon_hoc === lop.id_mon_hoc
-          && dk.lop_hoc.id !== lop.id
-      })
-      if (!found) return null
-      return {
-        lopId: found.lop_hoc.id,
-        tenMonHoc: found.lop_hoc.mon_hoc?.ten_mon_hoc || lop.mon_hoc?.ten_mon_hoc,
-        giaoVien: found.lop_hoc.giao_vien?.ho_ten || found.lop_hoc.giaoVien?.ho_ten || 'Giảng viên',
-        thoiGian: this.formatWeeklySchedule(found.lop_hoc),
-      }
-    },
+    hasRegisteredSubjectOtherClass() { return null },
 
     showSameSubjectAlert(targetClass, registeredClass) {
       this.sameSubjectDetails = {
@@ -695,64 +678,7 @@ export default {
     // ========================================================
     // LOGIC KIỂM TRA TRÙNG GIỜ HỌC
     // ========================================================
-    getConflict(lop) {
-      if (this.isRegistered(lop.id)) return null
-      if (this.hasRegisteredSubjectOtherClass(lop)) return null
-      if (!lop.thoi_gian_bat_dau || !lop.thoi_gian_ket_thuc) return null
-
-      const pA = this.parseDateParts(lop.thoi_gian_bat_dau)
-      const pAEnd = this.parseDateParts(lop.thoi_gian_ket_thuc)
-      if (!pA || !pAEnd) return null
-
-      const startMinA = pA.hour * 60 + pA.minute
-      const endMinA = pAEnd.hour * 60 + pAEnd.minute
-      const dayOfWeekA = this.getDayOfWeek(lop.thoi_gian_bat_dau)
-
-      for (const dk of this.myRegistrations) {
-        if (dk.trang_thai === 'da_huy' || !dk.lop_hoc) continue
-        const ex = dk.lop_hoc
-        if (!ex.thoi_gian_bat_dau || !ex.thoi_gian_ket_thuc) continue
-
-        const pB = this.parseDateParts(ex.thoi_gian_bat_dau)
-        const pBEnd = this.parseDateParts(ex.thoi_gian_ket_thuc)
-        if (!pB || !pBEnd) continue
-
-        const startMinB = pB.hour * 60 + pB.minute
-        const endMinB = pBEnd.hour * 60 + pBEnd.minute
-        const dayOfWeekB = this.getDayOfWeek(ex.thoi_gian_bat_dau)
-
-        let isConflict = false
-        let reason = ''
-
-        // TH1: Cùng ngày cụ thể và khoảng giờ đè lên nhau
-        if (pA.dateKey === pB.dateKey) {
-          if (startMinA < endMinB && endMinA > startMinB) {
-            isConflict = true
-            reason = `Cùng ngày ${pB.day}/${pB.month}`
-          }
-        }
-
-        // TH2: Cùng Thứ trong tuần và khung giờ đè lên nhau
-        if (dayOfWeekA === dayOfWeekB) {
-          if (startMinA < endMinB && endMinA > startMinB) {
-            isConflict = true
-            reason = `Vào ${this.getDayName(dayOfWeekB)} hàng tuần`
-          }
-        }
-
-        if (isConflict) {
-          return {
-            lopId: ex.id,
-            tenMonHoc: ex.mon_hoc?.ten_mon_hoc || 'Lớp đã đăng ký',
-            dayName: this.getDayName(dayOfWeekB),
-            timeRange: `${pB.timeStr} - ${pBEnd.timeStr}`,
-            reason: reason,
-          }
-        }
-      }
-
-      return null
-    },
+    getConflict() { return null },
 
     showConflictAlert(targetClass, conflictInfo) {
       this.conflictDetails = {
@@ -763,7 +689,12 @@ export default {
     },
 
     // XỬ LÝ ĐĂNG KÝ LỚP
-    async handleDangKy(lop) {
+    handleDangKy(lop) { this.faceTarget = lop },
+
+    async completeEnrollment(proof) {
+      const lop = this.faceTarget;
+      if (!lop || !proof?.verification_id) return;
+      this.faceTarget = null;
       // 1. Kiểm tra nếu đã có lớp khác cùng môn
       const sameSub = this.hasRegisteredSubjectOtherClass(lop)
       if (sameSub) {
@@ -780,7 +711,7 @@ export default {
 
       this.registeringId = lop.id
       try {
-        const res = await lichHocService.dangKyLop(lop.id)
+        const res = await lichHocService.dangKyLop(lop.id, proof.verification_id)
         if (res && res.status) {
           this.registeredSuccessClass = lop
           this.showSuccessModal = true

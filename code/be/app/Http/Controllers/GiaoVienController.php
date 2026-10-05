@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\GiaoVien\ChangePasswordGiaoVienRequest;
 use App\Http\Requests\GiaoVien\DangKyGiaoVienRequest;
 use App\Http\Requests\GiaoVien\DangNhapGiaoVienRequest;
 use App\Http\Requests\GiaoVien\UpdateProfileGiaoVienRequest;
-use App\Http\Requests\GiaoVien\ChangePasswordGiaoVienRequest;
 use App\Models\GiaoVien;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,24 +20,26 @@ class GiaoVienController extends Controller
     public function register(DangKyGiaoVienRequest $request)
     {
         try {
-            $data = $request->all();
-            $data['password']          = Hash::make($request->password);
-            $data['trang_thai_duyet']  = 'cho_duyet';
-            $data['tinh_trang']        = 1;
-            $data['is_active']         = 1;
-            $data['is_block']          = 0;
+            $data = $request->validated();
+            $data['password'] = Hash::make($request->password);
+            $data['trang_thai_duyet'] = 'cho_duyet';
+            $data['tinh_trang'] = 1;
+            $data['is_active'] = 1;
+            $data['is_block'] = 0;
 
             $giaoVien = GiaoVien::create($data);
 
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'Đăng ký tài khoản giáo viên thành công! Vui lòng chờ quản trị viên phê duyệt hồ sơ.',
-                'data'    => $giaoVien,
+                'data' => $giaoVien,
             ]);
         } catch (\Exception $e) {
+            report($e);
+
             return response()->json([
-                'status'  => false,
-                'message' => 'Đã có lỗi xảy ra: ' . $e->getMessage(),
+                'status' => false,
+                'message' => 'Không thể xử lý yêu cầu lúc này. Vui lòng thử lại.',
             ], 500);
         }
     }
@@ -46,16 +48,16 @@ class GiaoVienController extends Controller
     {
         try {
             $check = Auth::guard('giao_vien')->attempt([
-                'email'    => $request->email,
+                'email' => $request->email,
                 'password' => $request->password,
             ]);
 
             if ($check) {
                 $giaoVien = Auth::guard('giao_vien')->user();
 
-                if ($giaoVien->is_block == 1) {
+                if ($giaoVien->is_block == 1 || $giaoVien->tinh_trang != 1 || ! $giaoVien->is_active) {
                     return response()->json([
-                        'status'  => false,
+                        'status' => false,
                         'message' => 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên!',
                     ], 403);
                 }
@@ -63,21 +65,23 @@ class GiaoVienController extends Controller
                 $token = $giaoVien->createToken('token_giao_vien')->plainTextToken;
 
                 return response()->json([
-                    'status'  => true,
+                    'status' => true,
                     'message' => 'Đăng nhập thành công',
-                    'token'   => $token,
-                    'user'    => $giaoVien,
+                    'token' => $token,
+                    'user' => $giaoVien,
                 ]);
             }
 
             return response()->json([
-                'status'  => false,
+                'status' => false,
                 'message' => 'Tài khoản hoặc mật khẩu không chính xác',
             ], 401);
         } catch (\Exception $e) {
+            report($e);
+
             return response()->json([
-                'status'  => false,
-                'message' => 'Đã có lỗi xảy ra: ' . $e->getMessage(),
+                'status' => false,
+                'message' => 'Không thể xử lý yêu cầu lúc này. Vui lòng thử lại.',
             ], 500);
         }
     }
@@ -90,7 +94,7 @@ class GiaoVienController extends Controller
         }
 
         return response()->json([
-            'status'  => true,
+            'status' => true,
             'message' => 'Đăng xuất thành công',
         ]);
     }
@@ -101,12 +105,12 @@ class GiaoVienController extends Controller
         if ($user && $user instanceof GiaoVien) {
             return response()->json([
                 'status' => true,
-                'user'   => $user,
+                'user' => $user,
             ]);
         }
 
         return response()->json([
-            'status'  => false,
+            'status' => false,
             'message' => 'Token không hợp lệ hoặc đã hết hạn!',
         ], 401);
     }
@@ -114,9 +118,10 @@ class GiaoVienController extends Controller
     public function getProfile()
     {
         $user = Auth::guard('sanctum')->user();
+
         return response()->json([
             'status' => true,
-            'data'   => $user,
+            'data' => $user,
         ]);
     }
 
@@ -136,14 +141,16 @@ class GiaoVienController extends Controller
             ]));
 
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'Cập nhật hồ sơ giáo viên thành công!',
-                'data'    => $user,
+                'data' => $user,
             ]);
         } catch (\Exception $e) {
+            report($e);
+
             return response()->json([
-                'status'  => false,
-                'message' => 'Cập nhật thất bại: ' . $e->getMessage(),
+                'status' => false,
+                'message' => 'Không thể xử lý yêu cầu lúc này. Vui lòng thử lại.',
             ], 500);
         }
     }
@@ -153,9 +160,9 @@ class GiaoVienController extends Controller
         try {
             $user = Auth::guard('sanctum')->user();
 
-            if (!Hash::check($request->current_password, $user->password)) {
+            if (! Hash::check($request->current_password, $user->password)) {
                 return response()->json([
-                    'status'  => false,
+                    'status' => false,
                     'message' => 'Mật khẩu hiện tại không chính xác!',
                 ], 400);
             }
@@ -164,13 +171,15 @@ class GiaoVienController extends Controller
             $user->save();
 
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'Đổi mật khẩu thành công!',
             ]);
         } catch (\Exception $e) {
+            report($e);
+
             return response()->json([
-                'status'  => false,
-                'message' => 'Đổi mật khẩu thất bại: ' . $e->getMessage(),
+                'status' => false,
+                'message' => 'Không thể xử lý yêu cầu lúc này. Vui lòng thử lại.',
             ], 500);
         }
     }
@@ -182,9 +191,10 @@ class GiaoVienController extends Controller
     public function getDataAdmin()
     {
         $data = GiaoVien::orderBy('id', 'desc')->get();
+
         return response()->json([
             'status' => true,
-            'data'   => $data,
+            'data' => $data,
         ]);
     }
 
@@ -196,36 +206,38 @@ class GiaoVienController extends Controller
             $giaoVien->save();
 
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'Cập nhật trạng thái giáo viên thành công!',
             ]);
         }
 
         return response()->json([
-            'status'  => false,
+            'status' => false,
             'message' => 'Không tìm thấy giáo viên!',
         ], 404);
     }
 
     public function duyetGiaoVien(Request $request)
     {
-        $admin    = Auth::guard('sanctum')->user();
+        $request->validate(['id' => 'required|integer|exists:giao_viens,id', 'trang_thai_duyet' => 'required|in:da_duyet,tu_choi']);
+        $admin = Auth::guard('sanctum')->user();
         $giaoVien = GiaoVien::find($request->id);
 
         if ($giaoVien) {
-            $giaoVien->trang_thai_duyet   = $request->trang_thai_duyet; // 'da_duyet' | 'tu_choi'
+            $giaoVien->trang_thai_duyet = $request->trang_thai_duyet; // 'da_duyet' | 'tu_choi'
             $giaoVien->giao_vien_da_duyet = $admin ? $admin->id : null;
             $giaoVien->save();
 
             $msg = $request->trang_thai_duyet == 'da_duyet' ? 'Đã duyệt hồ sơ giáo viên thành công!' : 'Đã từ chối hồ sơ giáo viên!';
+
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => $msg,
             ]);
         }
 
         return response()->json([
-            'status'  => false,
+            'status' => false,
             'message' => 'Không tìm thấy giáo viên!',
         ], 404);
     }
@@ -233,16 +245,16 @@ class GiaoVienController extends Controller
     public function search(Request $request)
     {
         $timKiem = trim($request->noi_dung_tim);
-        $data    = GiaoVien::where('ho_ten', 'like', '%' . $timKiem . '%')
-            ->orWhere('email', 'like', '%' . $timKiem . '%')
-            ->orWhere('so_dien_thoai', 'like', '%' . $timKiem . '%')
-            ->orWhere('chuc_danh', 'like', '%' . $timKiem . '%')
+        $data = GiaoVien::where('ho_ten', 'like', '%'.$timKiem.'%')
+            ->orWhere('email', 'like', '%'.$timKiem.'%')
+            ->orWhere('so_dien_thoai', 'like', '%'.$timKiem.'%')
+            ->orWhere('chuc_danh', 'like', '%'.$timKiem.'%')
             ->orderBy('id', 'desc')
             ->get();
 
         return response()->json([
             'status' => true,
-            'data'   => $data,
+            'data' => $data,
         ]);
     }
 
@@ -254,6 +266,7 @@ class GiaoVienController extends Controller
     {
         $data = GiaoVien::where('trang_thai_duyet', 'da_duyet')
             ->where('tinh_trang', 1)
+            ->where('is_active', 1)
             ->where('is_block', 0)
             ->select('id', 'ho_ten', 'chuc_danh', 'so_nam_kinh_nghiem', 'mo_ta', 'hinh_anh')
             ->orderBy('id', 'desc')
@@ -261,7 +274,7 @@ class GiaoVienController extends Controller
 
         return response()->json([
             'status' => true,
-            'data'   => $data,
+            'data' => $data,
         ]);
     }
 
@@ -270,17 +283,19 @@ class GiaoVienController extends Controller
         $giaoVien = GiaoVien::where('id', $id)
             ->where('trang_thai_duyet', 'da_duyet')
             ->where('tinh_trang', 1)
+            ->where('is_block', 0)->where('is_active', 1)
+            ->select('id', 'ho_ten', 'chuc_danh', 'so_nam_kinh_nghiem', 'mo_ta', 'hinh_anh')
             ->first();
 
         if ($giaoVien) {
             return response()->json([
                 'status' => true,
-                'data'   => $giaoVien,
+                'data' => $giaoVien,
             ]);
         }
 
         return response()->json([
-            'status'  => false,
+            'status' => false,
             'message' => 'Không tìm thấy thông tin giáo viên!',
         ], 404);
     }

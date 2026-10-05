@@ -4,272 +4,144 @@ namespace App\Http\Controllers\GiaoVien;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LopHoc\TaoLopHocRequest;
+use App\Models\GiaoVien;
 use App\Models\LopHoc;
-use App\Models\MonHoc;
-use App\Models\PhongHoc;
-use App\Models\PhongHop;
+use App\Services\ClassLifecycleService;
+use App\Services\ClassRoomService;
+use App\Services\LessonScheduleService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
-/**
- * Controller: Quản lý Lớp học (phía Giáo viên)
- *
- * Bao gồm:
- * - lichDay(): Lấy lịch dạy của GV hiện tại theo khoảng ngày
- * - index(): Danh sách lớp GV đang dạy
- * - store(): Tạo lớp mới
- * - show(): Chi tiết 1 lớp + DS học viên
- * - update(): Cập nhật lớp
- * - destroy(): Hủy lớp (chuyển tinh_trang = da_huy)
- */
 class LopHocController extends Controller
 {
-    /**
-     * GET /api/giao-vien/lich-day
-     * Query: from_date, to_date, tinh_trang, id_mon_hoc
-     */
-    public function lichDay(Request $request)
+    public function lichDay(Request $request, LessonScheduleService $schedule)
     {
-        try {
-            $gv = Auth::guard('sanctum')->user();
-
-            $query = LopHoc::with(['monHoc', 'phongHoc'])
-                ->where('id_giao_vien', $gv->id);
-
-            // Filter theo khoảng ngày
-            if ($request->filled('from_date')) {
-                $query->where('thoi_gian_ket_thuc', '>=', $request->from_date);
-            }
-            if ($request->filled('to_date')) {
-                $query->where('thoi_gian_bat_dau', '<=', $request->to_date);
-            }
-
-            // Filter theo trạng thái
-            if ($request->filled('tinh_trang')) {
-                $query->where('tinh_trang', $request->tinh_trang);
-            }
-
-            // Filter theo môn học
-            if ($request->filled('id_mon_hoc')) {
-                $query->where('id_mon_hoc', $request->id_mon_hoc);
-            }
-
-            $data = $query->orderBy('thoi_gian_bat_dau', 'asc')->get();
-
-            // Thêm sĩ số hiện tại cho mỗi lớp
-            $data->each(function ($lop) {
-                $lop->so_hoc_vien_hien_tai = $lop->so_hoc_vien_hien_tai;
-            });
-
-            return response()->json([
-                'status' => true,
-                'message' => 'Lấy lịch dạy thành công.',
-                'data' => $data,
-            ]);
-        } catch (\Exception $e) {
-            Log::error('LichDay error: ' . $e->getMessage());
-            return response()->json([
-                'status' => false,
-                'message' => 'Đã có lỗi xảy ra: ' . $e->getMessage(),
-            ], 500);
-        }
+        return response()->json(['status' => true, 'data' => $schedule->calendar($request, Auth::guard('sanctum')->user())]);
     }
 
-    /**
-     * GET /api/giao-vien/lop-hoc
-     * Danh sách tất cả lớp của GV
-     */
     public function index()
     {
-        try {
-            $gv = Auth::guard('sanctum')->user();
+        $rows = LopHoc::with(['monHoc', 'phongHoc', 'phongHop', 'buoiHocs'])
+            ->where('id_giao_vien', Auth::guard('sanctum')->id())->orderByDesc('thoi_gian_bat_dau')->get();
+        $rows->each(fn ($row) => $row->so_hoc_vien_hien_tai = $row->so_hoc_vien_hien_tai);
 
-            $data = LopHoc::with(['monHoc', 'phongHoc'])
-                ->where('id_giao_vien', $gv->id)
-                ->orderBy('thoi_gian_bat_dau', 'desc')
-                ->get();
-
-            $data->each(function ($lop) {
-                $lop->so_hoc_vien_hien_tai = $lop->so_hoc_vien_hien_tai;
-            });
-
-            return response()->json([
-                'status' => true,
-                'message' => 'Lấy danh sách lớp học thành công.',
-                'data' => $data,
-            ]);
-        } catch (\Exception $e) {
-            Log::error('GiaoVien lop-hoc index error: ' . $e->getMessage());
-            return response()->json([
-                'status' => false,
-                'message' => 'Đã có lỗi xảy ra: ' . $e->getMessage(),
-            ], 500);
-        }
+        return response()->json(['status' => true, 'data' => $rows]);
     }
 
-    /**
-     * POST /api/giao-vien/lop-hoc
-     */
-    public function store(TaoLopHocRequest $request)
+    public function show(int $id)
     {
-        try {
-            $gv = Auth::guard('sanctum')->user();
-            $data = $request->validated();
-            $data['id_giao_vien'] = $gv->id;
-            $data['tinh_trang'] = $data['tinh_trang'] ?? 'sap_mo';
+        $class = LopHoc::with(['monHoc', 'phongHoc', 'phongHop', 'buoiHocs', 'dangKyLops.hocVien'])
+            ->where('id_giao_vien', Auth::guard('sanctum')->id())->findOrFail($id);
+        $class->so_hoc_vien_hien_tai = $class->so_hoc_vien_hien_tai;
 
-            $lopHoc = LopHoc::create($data);
-
-            // Tự động tạo sẵn phòng học trực tuyến cho lớp học
-            $maPhong = sprintf('%03d-%03d-%03d', mt_rand(100, 999), mt_rand(100, 999), mt_rand(100, 999));
-            PhongHop::create([
-                'ma_phong' => $maPhong,
-                'ten_phong' => 'Phòng học: ' . $lopHoc->ten_lop,
-                'id_chu_phong' => $gv->id,
-                'id_lop_hoc' => $lopHoc->id,
-                'so_nguoi_toi_da' => $lopHoc->so_luong_hoc_vien_toi_da ?: 100,
-                'mo_ta' => 'Phòng học trực tuyến EduLink cho lớp ' . $lopHoc->ten_lop,
-                'thoi_gian_bat_dau' => $lopHoc->thoi_gian_bat_dau ?: now(),
-                'trang_thai' => 1
-            ]);
-
-            // Cập nhật link_online cho lớp
-            $lopHoc->link_online = '/phong-hoc/' . $maPhong;
-            $lopHoc->save();
-
-            // Load quan hệ để trả về đầy đủ
-            $lopHoc->load(['monHoc', 'phongHoc']);
-
-            return response()->json([
-                'status' => true,
-                'message' => 'Tạo lớp học thành công!',
-                'data' => $lopHoc,
-            ]);
-        } catch (\Exception $e) {
-            Log::error('GiaoVien tao lop-hoc error: ' . $e->getMessage());
-            return response()->json([
-                'status' => false,
-                'message' => 'Tạo lớp thất bại: ' . $e->getMessage(),
-            ], 500);
-        }
+        return response()->json(['status' => true, 'data' => $class]);
     }
 
-    /**
-     * GET /api/giao-vien/lop-hoc/{id}
-     * Chi tiết 1 lớp + danh sách học viên
-     */
-    public function show($id)
+    public function store(TaoLopHocRequest $request, LessonScheduleService $schedule)
     {
-        try {
-            $gv = Auth::guard('sanctum')->user();
+        $class = DB::transaction(function () use ($request, $schedule) {
+            $data = $this->classData($request);
+            $intervals = $schedule->intervals($data);
+            $schedule->checkResources(Auth::guard('sanctum')->id(), $data['id_phong_hoc'], $intervals);
+            $class = LopHoc::create([...$data, 'id_giao_vien' => Auth::guard('sanctum')->id()]);
+            foreach ($intervals as $interval) {
+                $class->buoiHocs()->create($interval);
+            }
+            $this->syncRoom($class);
 
-            $lopHoc = LopHoc::with(['monHoc', 'phongHoc', 'dangKyLops.hocVien'])
-                ->where('id_giao_vien', $gv->id)
-                ->where('id', $id)
-                ->first();
+            return $class->load(['monHoc', 'phongHoc', 'phongHop', 'buoiHocs']);
+        }, 5);
 
-            if (!$lopHoc) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Không tìm thấy lớp học hoặc bạn không có quyền truy cập.',
-                ], 404);
+        return response()->json(['status' => true, 'message' => 'Tạo lớp học thành công.', 'data' => $class], 201);
+    }
+
+    public function update(TaoLopHocRequest $request, int $id, LessonScheduleService $schedule)
+    {
+        $class = DB::transaction(function () use ($request, $id, $schedule) {
+            $actor = Auth::guard('sanctum')->user();
+            GiaoVien::whereKey($actor->id)->lockForUpdate()->firstOrFail();
+            $class = LopHoc::where('id_giao_vien', $actor->id)->lockForUpdate()->findOrFail($id);
+            $data = $this->classData($request);
+            abort_if(in_array($class->tinh_trang, ['da_huy', 'da_ket_thuc'])
+                && $data['tinh_trang'] !== $class->tinh_trang, 409, 'Không thể mở lại lớp đã hủy hoặc kết thúc.');
+            abort_if($data['tinh_trang'] === 'da_ket_thuc' && $class->tinh_trang !== 'da_ket_thuc',
+                409, 'Hãy hoàn tất từng buổi học sau giờ kết thúc để kết thúc lớp.');
+            $fields = ['id_mon_hoc', 'hinh_thuc', 'id_phong_hoc', 'thoi_gian_bat_dau', 'thoi_gian_ket_thuc', 'recurrence', 'recurrence_until'];
+            $changed = false;
+            foreach ($fields as $field) {
+                $old = $class->$field;
+                if ($old instanceof \DateTimeInterface) {
+                    $old = $old->format($field === 'recurrence_until' ? 'Y-m-d' : 'Y-m-d H:i:s');
+                }
+                $new = $data[$field] ?? null;
+                if (in_array($field, ['thoi_gian_bat_dau', 'thoi_gian_ket_thuc'])) {
+                    $new = Carbon::parse($new)->setTimezone(config('app.timezone'))->format('Y-m-d H:i:s');
+                }
+                if ((string) $old !== (string) $new) {
+                    $changed = true;
+                }
+            }
+            // A published enrolled timetable cannot be silently replaced or lose attendance/reviews.
+            if ($changed && ($class->dangKyLops()->where('trang_thai', '!=', 'da_huy')->exists()
+                || $class->buoiHocs()->where('thoi_gian_bat_dau', '<=', now())->exists())) {
+                throw ValidationException::withMessages(['thoi_gian_bat_dau' => 'Lớp đã có học viên hoặc đã diễn ra; hãy tạo lớp mới để đổi lịch.']);
+            }
+            abort_if($data['si_so_toi_da'] < $class->so_hoc_vien_hien_tai, 409, 'Sĩ số mới thấp hơn số học viên.');
+            if ($changed) {
+                $intervals = $schedule->intervals($data);
+                $schedule->checkResources($actor->id, $data['id_phong_hoc'], $intervals, $class->id);
+                $class->buoiHocs()->delete();
+                foreach ($intervals as $interval) {
+                    $class->buoiHocs()->create($interval);
+                }
+            }
+            $class->fill($data)->save();
+            $this->syncRoom($class);
+            if ($class->tinh_trang === 'da_huy') {
+                $this->cancel($class);
             }
 
-            $lopHoc->so_hoc_vien_hien_tai = $lopHoc->so_hoc_vien_hien_tai;
+            return $class->load(['monHoc', 'phongHoc', 'phongHop', 'buoiHocs']);
+        }, 5);
 
-            return response()->json([
-                'status' => true,
-                'message' => 'Lấy chi tiết lớp học thành công.',
-                'data' => $lopHoc,
-            ]);
-        } catch (\Exception $e) {
-            Log::error('GiaoVien show lop-hoc error: ' . $e->getMessage());
-            return response()->json([
-                'status' => false,
-                'message' => 'Đã có lỗi xảy ra: ' . $e->getMessage(),
-            ], 500);
-        }
+        return response()->json(['status' => true, 'data' => $class]);
     }
 
-    /**
-     * PUT /api/giao-vien/lop-hoc/{id}
-     */
-    public function update(TaoLopHocRequest $request, $id)
+    public function destroy(int $id)
     {
-        try {
-            $gv = Auth::guard('sanctum')->user();
+        DB::transaction(function () use ($id) {
+            $class = LopHoc::where('id_giao_vien', Auth::guard('sanctum')->id())->lockForUpdate()->findOrFail($id);
+            $this->cancel($class);
+        }, 5);
 
-            $lopHoc = LopHoc::where('id_giao_vien', $gv->id)
-                ->where('id', $id)
-                ->first();
-
-            if (!$lopHoc) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Không tìm thấy lớp học hoặc bạn không có quyền.',
-                ], 404);
-            }
-
-            $lopHoc->update($request->validated());
-            $lopHoc->load(['monHoc', 'phongHoc']);
-
-            return response()->json([
-                'status' => true,
-                'message' => 'Cập nhật lớp học thành công!',
-                'data' => $lopHoc,
-            ]);
-        } catch (\Exception $e) {
-            Log::error('GiaoVien update lop-hoc error: ' . $e->getMessage());
-            return response()->json([
-                'status' => false,
-                'message' => 'Cập nhật thất bại: ' . $e->getMessage(),
-            ], 500);
-        }
+        return response()->json(['status' => true, 'message' => 'Đã hủy lớp học.']);
     }
 
-    /**
-     * DELETE /api/giao-vien/lop-hoc/{id}
-     * Chuyển trạng thái thành 'da_huy' (soft cancel)
-     */
-    public function destroy($id)
+    private function cancel(LopHoc $class): void
     {
-        try {
-            $gv = Auth::guard('sanctum')->user();
+        app(ClassLifecycleService::class)->cancel($class);
+    }
 
-            $lopHoc = LopHoc::where('id_giao_vien', $gv->id)
-                ->where('id', $id)
-                ->first();
-
-            if (!$lopHoc) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Không tìm thấy lớp học hoặc bạn không có quyền.',
-                ], 404);
-            }
-
-            // Chuyển sang trạng thái hủy + hủy tất cả đăng ký
-            DB::beginTransaction();
-            $lopHoc->tinh_trang = 'da_huy';
-            $lopHoc->save();
-
-            // Hủy các đăng ký của lớp này
-            $lopHoc->dangKyLops()->where('trang_thai', '!=', 'da_huy')
-                ->update(['trang_thai' => 'da_huy']);
-            DB::commit();
-
-            return response()->json([
-                'status' => true,
-                'message' => 'Đã hủy lớp học thành công!',
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('GiaoVien destroy lop-hoc error: ' . $e->getMessage());
-            return response()->json([
-                'status' => false,
-                'message' => 'Hủy lớp thất bại: ' . $e->getMessage(),
-            ], 500);
+    private function classData(TaoLopHocRequest $request): array
+    {
+        $data = $request->validated();
+        $data['recurrence'] = $data['recurrence'] ?? 'once';
+        $data['recurrence_until'] = $data['recurrence'] === 'weekly' ? $data['recurrence_until'] : null;
+        $data['id_phong_hoc'] = $data['hinh_thuc'] === 'offline' ? (int) $data['id_phong_hoc'] : null;
+        $data['link_online'] = $data['hinh_thuc'] === 'online' ? ($data['link_online'] ?? null) : null;
+        $data['tinh_trang'] = $data['tinh_trang'] ?? 'sap_mo';
+        foreach (['thoi_gian_bat_dau', 'thoi_gian_ket_thuc'] as $field) {
+            $data[$field] = Carbon::parse($data[$field])->setTimezone(config('app.timezone'));
         }
+
+        return $data;
+    }
+
+    private function syncRoom(LopHoc $class): void
+    {
+        app(ClassRoomService::class)->sync($class);
     }
 }

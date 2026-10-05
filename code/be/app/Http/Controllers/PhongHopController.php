@@ -2,302 +2,148 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BuoiHoc;
 use App\Models\ChiTietPhongHop;
+use App\Models\GiaoVien;
 use App\Models\PhongHop;
-use App\Models\LopHoc;
+use App\Services\FaceVerificationService;
+use App\Services\SessionAccessService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class PhongHopController extends Controller
 {
-    /**
-     * Tạo mã phòng ngẫu nhiên định dạng XXX-XXX-XXX
-     */
-    private function generateRoomCode()
+    private function session(Request $request): BuoiHoc
     {
-        do {
-            $code = sprintf("%03d-%03d-%03d", mt_rand(100, 999), mt_rand(100, 999), mt_rand(100, 999));
-        } while (PhongHop::where('ma_phong', $code)->exists());
+        $request->validate(['id_buoi_hoc' => 'required|integer|exists:buoi_hocs,id']);
+        $session = BuoiHoc::with(['lopHoc.giaoVien', 'lopHoc.phongHop'])->findOrFail($request->integer('id_buoi_hoc'));
+        app(SessionAccessService::class)->authorize(Auth::guard('sanctum')->user(), $session);
+        abort_unless($session->lopHoc->hinh_thuc === 'online' && $session->lopHoc->phongHop?->trang_thai == 1, 409, 'Buổi học không có phòng trực tuyến mở.');
 
-        return $code;
+        return $session;
     }
 
-    /**
-     * POST /api/phong-hop/create
-     * Tạo phòng họp mới
-     */
-    public function create(Request $request)
+    private function timeWindow(BuoiHoc $session): void
     {
-        $request->validate([
-            'ten_phong' => 'required|string|max:255',
-            'id_chu_phong' => 'nullable',
-            'so_nguoi_toi_da' => 'nullable|integer',
-            'email_khach_moi' => 'nullable|string',
-            'id_lop_hoc' => 'nullable|integer',
-        ]);
-
-        try {
-            $maPhong = $this->generateRoomCode();
-
-            $phongHop = PhongHop::create([
-                'ma_phong' => $maPhong,
-                'ten_phong' => $request->ten_phong,
-                'id_chu_phong' => $request->id_chu_phong,
-                'id_lop_hoc' => $request->id_lop_hoc,
-                'so_nguoi_toi_da' => $request->so_nguoi_toi_da ?? 100,
-                'mo_ta' => $request->mo_ta,
-                'email_khach_moi' => $request->email_khach_moi,
-                'thoi_gian_bat_dau' => now(),
-                'trang_thai' => 1,
-            ]);
-
-            return response()->json([
-                'status' => true,
-                'message' => 'Khởi tạo phòng họp thành công!',
-                'data' => $phongHop,
-            ], 201);
-        } catch (\Exception $e) {
-            Log::error('Loi tao phong hop: ' . $e->getMessage());
-            return response()->json([
-                'status' => false,
-                'message' => 'Không thể tạo phòng họp: ' . $e->getMessage(),
-            ], 500);
-        }
+        abort_if(now()->lt($session->thoi_gian_bat_dau->copy()->subMinutes(config('smarttrial.room_early_minutes')))
+            || now()->gte($session->thoi_gian_ket_thuc), 409, 'Chưa đến giờ vào phòng hoặc buổi học đã kết thúc.');
     }
 
-    /**
-     * POST /api/phong-hop/kiem-tra-phong-hop
-     * Kiểm tra phòng họp có tồn tại và đang hoạt động không
-     */
-    public function kiemTraPhongHop(Request $request)
+    public function taoToken(Request $request, FaceVerificationService $proofs)
     {
-        $maPhong = trim($request->input('ma_phong', ''));
-
-        if (!$maPhong) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Vui lòng cung cấp mã phòng họp!',
-            ], 400);
-        }
-
-        $phong = PhongHop::where('ma_phong', $maPhong)->first();
-
-        // Nếu chưa có, kiểm tra xem có phải mã phòng gắn với lớp học không (ví dụ EDU-101, PH-1)
-        if (!$phong) {
-            // Tự động tìm lớp học hoặc tạo phòng sẵn cho mã phòng này
-            if (preg_match('/(?:EDU|PH|ROOM)-(\d+)/i', $maPhong, $matches)) {
-                $lopId = $matches[1];
-                $lop = LopHoc::find($lopId);
-                $tenPhong = $lop ? "Phòng học: " . ($lop->monHoc?->ten_mon_hoc ?? "Lớp $lopId") : "Phòng học $maPhong";
-                $phong = PhongHop::create([
-                    'ma_phong' => $maPhong,
-                    'ten_phong' => $tenPhong,
-                    'id_lop_hoc' => $lop ? $lop->id : null,
-                    'id_chu_phong' => $lop ? $lop->id_giao_vien : null,
-                    'thoi_gian_bat_dau' => now(),
-                    'trang_thai' => 1,
-                ]);
+        $request->validate(['verification_id' => 'required|string|size:64']);
+        $actor = Auth::guard('sanctum')->user();
+        $data = DB::transaction(function () use ($request, $proofs, $actor) {
+            $session = $this->session($request);
+            $this->timeWindow($session);
+            $url = config('services.livekit.url');
+            $key = config('services.livekit.api_key');
+            $secret = config('services.livekit.api_secret');
+            if (! $url || ! $key || ! $secret || ! preg_match('#^wss?://#', $url)) {
+                abort(503, 'Dịch vụ phòng học chưa được cấu hình.');
             }
-        }
+            $proofs->consume($actor, $request->input('verification_id'), 'room', $session->id);
+            $room = $session->lopHoc->phongHop;
+            $claims = [
+                'iss' => $key, 'sub' => $proofs::role($actor).':'.$actor->id, 'name' => $actor->ho_ten,
+                'nbf' => now()->timestamp - 5, 'iat' => now()->timestamp,
+                'exp' => min(now()->timestamp + 300, $session->thoi_gian_ket_thuc->timestamp),
+                'video' => ['roomJoin' => true, 'room' => $room->ma_phong, 'canPublish' => true, 'canSubscribe' => true, 'canPublishData' => true],
+            ];
+            $encode = fn ($value) => rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
+            $body = $encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT'])).'.'.$encode(json_encode($claims, JSON_THROW_ON_ERROR));
+            $token = $body.'.'.$encode(hash_hmac('sha256', $body, $secret, true));
+            $grant = $proofs->issue($actor, 'attendance', $session->id);
 
-        if (!$phong) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Mã phòng không tồn tại hoặc đã kết thúc!',
-            ], 404);
-        }
+            return ['token' => $token, 'server_url' => $url, 'id_phong_hop' => $room->id, 'ma_phong' => $room->ma_phong,
+                'attendance_token' => $grant['verification_id']];
+        }, 5);
 
-        return response()->json([
-            'status' => true,
-            'message' => 'Mã phòng họp hợp lệ.',
-            'data' => $phong,
-        ]);
+        return response()->json(['status' => true, 'data' => $data]);
     }
 
-    /**
-     * POST /api/phong-hop/tao-token
-     * Sinh token truy cập phòng video LiveKit / WebRTC
-     */
-    public function taoToken(Request $request)
+    public function chiTietPhongHopCreate(Request $request, FaceVerificationService $proofs)
     {
-        $maPhong = trim($request->input('ma_phong', ''));
-        $userName = trim($request->input('user_name', 'Học viên'));
+        $request->validate(['attendance_token' => 'required|string|size:64']);
+        $actor = Auth::guard('sanctum')->user();
+        $row = DB::transaction(function () use ($request, $proofs, $actor) {
+            $session = $this->session($request);
+            $this->timeWindow($session);
+            $proofs->consume($actor, $request->input('attendance_token'), 'attendance', $session->id);
 
-        if (!$maPhong) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Mã phòng không được để trống!',
-            ], 400);
-        }
-
-        $phong = PhongHop::where('ma_phong', $maPhong)->first();
-        if (!$phong) {
-            $phong = PhongHop::create([
-                'ma_phong' => $maPhong,
-                'ten_phong' => "Lớp học: $maPhong",
-                'thoi_gian_bat_dau' => now(),
-                'trang_thai' => 1,
+            return ChiTietPhongHop::updateOrCreate([
+                'id_buoi_hoc' => $session->id, 'loai_nguoi_dung' => $proofs::role($actor), 'id_nguoi_dung' => $actor->id,
+            ], [
+                'id_phong_hop' => $session->lopHoc->phongHop->id, 'xac_thuc_khuon_mat' => 1,
+                'attendance_source' => 'face_verified',
+                'is_active' => 1, 'trang_thai' => 1, 'thoi_gian_tham_gia' => now(), 'thoi_gian_roi' => null,
             ]);
-        }
+        }, 5);
 
-        // Tạo token phiên bảo mật
-        $token = 'edulink_jwt_' . bin2hex(random_bytes(24)) . '_' . time();
-
-        return response()->json([
-            'status' => true,
-            'token' => $token,
-            'id_phong_hop' => $phong->id,
-            'ma_phong' => $phong->ma_phong,
-            'ten_phong' => $phong->ten_phong,
-        ]);
+        return response()->json(['status' => true, 'data' => $row]);
     }
 
-    /**
-     * GET /api/phong-hop/ma-phong
-     */
-    public function maPhong(Request $request)
-    {
-        $maPhong = trim($request->input('ma_phong', ''));
-        $phong = PhongHop::where('ma_phong', $maPhong)->first();
-
-        if (!$phong) {
-            return response()->json(['status' => false, 'message' => 'Không tìm thấy phòng'], 404);
-        }
-
-        return response()->json(['status' => true, 'data' => $phong]);
-    }
-
-    /**
-     * GET /api/phong-hop/by-ma-phong/{maPhong}
-     */
-    public function getByMaPhong($maPhong)
-    {
-        $phong = PhongHop::where('ma_phong', $maPhong)->first();
-        if ($phong) {
-            return response()->json([
-                'status' => true,
-                'data' => $phong
-            ]);
-        }
-        return response()->json([
-            'status' => false,
-            'message' => 'Không tìm thấy phòng họp với mã: ' . $maPhong
-        ], 404);
-    }
-
-    /**
-     * POST /api/phong-hop/roi-phong
-     */
     public function roiPhong(Request $request)
     {
-        $idNguoiDung = $request->input('id_nguoi_dung');
-        $idPhongHop = $request->input('id_phong_hop');
+        $request->validate(['id_buoi_hoc' => 'required|integer']);
+        $actor = Auth::guard('sanctum')->user();
+        ChiTietPhongHop::where('id_buoi_hoc', $request->integer('id_buoi_hoc'))
+            ->where('loai_nguoi_dung', FaceVerificationService::role($actor))->where('id_nguoi_dung', $actor->id)
+            ->where('is_active', 1)->update(['is_active' => 0, 'thoi_gian_roi' => now()]);
 
-        if ($idNguoiDung && $idPhongHop) {
-            ChiTietPhongHop::where('id_nguoi_dung', $idNguoiDung)
-                ->where('id_phong_hop', $idPhongHop)
-                ->where('is_active', 1)
-                ->update([
-                    'is_active' => 0,
-                    'thoi_gian_roi' => now(),
-                ]);
-        }
-
-        return response()->json([
-            'status' => true,
-            'message' => 'Đã lưu lịch sử rời phòng.',
-        ]);
+        return response()->json(['status' => true]);
     }
 
-    /**
-     * GET /api/chi-tiet-phong-hop/data
-     */
-    public function chiTietPhongHopData(Request $request)
+    public function lichSuThamGia()
     {
-        $idNguoiDung = $request->input('id_nguoi_dung');
+        $actor = Auth::guard('sanctum')->user();
 
-        // Lấy danh sách các phòng họp gắn với lịch học hoặc phòng đã tham gia
-        $data = PhongHop::where('trang_thai', 1)
-            ->orderBy('thoi_gian_bat_dau', 'asc')
-            ->limit(10)
-            ->get();
-
-        return response()->json([
-            'status' => true,
-            'data' => $data,
-        ]);
+        return response()->json(['status' => true, 'data' => ChiTietPhongHop::with('phongHop')
+            ->where('loai_nguoi_dung', FaceVerificationService::role($actor))->where('id_nguoi_dung', $actor->id)->orderByDesc('id')->get()]);
     }
 
-    /**
-     * POST /api/chi-tiet-phong-hop/create
-     * Lưu chi tiết điểm danh / tham gia phòng
-     */
-    public function chiTietPhongHopCreate(Request $request)
+    public function chiTietPhongHopData()
     {
-        $record = ChiTietPhongHop::create([
-            'id_phong_hop' => $request->id_phong_hop,
-            'id_nguoi_dung' => $request->id_nguoi_dung,
-            'xac_thuc_khuon_mat' => $request->xac_thuc_khuon_mat ?? 1,
-            'is_vi_pham' => $request->is_vi_pham ?? 0,
-            'is_nguoi_dung' => $request->is_nguoi_dung ?? 1,
-            'is_active' => $request->is_active ?? 1,
-            'trang_thai' => $request->trang_thai ?? 1,
-            'thoi_gian_tham_gia' => now(),
-        ]);
-
-        return response()->json([
-            'status' => true,
-            'message' => 'Đã ghi nhận điểm danh phòng học.',
-            'data' => $record,
-        ]);
+        return $this->lichSuThamGia();
     }
 
-    /**
-     * GET /api/phong-hop/lich-su-tham-gia
-     */
-    public function lichSuThamGia(Request $request)
+    public function phongHopLienQuan()
     {
-        $idNguoiDung = $request->input('id_nguoi_dung');
-
-        $query = ChiTietPhongHop::with('phongHop')
-            ->where('id_nguoi_dung', $idNguoiDung)
-            ->orderBy('created_at', 'desc')
-            ->limit(15);
-
-        $list = $query->get()->map(function ($item) {
-            $durationMinutes = 0;
-            if ($item->thoi_gian_tham_gia && $item->thoi_gian_roi) {
-                $durationMinutes = round($item->thoi_gian_roi->diffInMinutes($item->thoi_gian_tham_gia));
+        $actor = Auth::guard('sanctum')->user();
+        $rooms = PhongHop::whereHas('lopHoc', function ($q) use ($actor) {
+            if ($actor instanceof GiaoVien) {
+                $q->where('id_giao_vien', $actor->id);
+            } else {
+                $q->whereHas('dangKyLops', fn ($q) => $q->where('id_hoc_vien', $actor->id)->whereIn('trang_thai', ['da_xac_nhan', 'da_thanh_toan']));
             }
-            return [
-                'id' => $item->id,
-                'ten_phong' => $item->phongHop?->ten_phong ?? 'Phòng học trực tuyến',
-                'chu_phong' => 'Giảng viên EduLink',
-                'thoi_gian_bat_dau' => $item->thoi_gian_tham_gia ?? $item->created_at,
-                'thoi_luong' => $durationMinutes > 0 ? "{$durationMinutes} phút" : "Đang tham gia",
-                'vai_tro' => $item->is_nguoi_dung ? 'Học viên' : 'Thành viên',
-            ];
-        });
+        })->get();
 
-        return response()->json([
-            'status' => true,
-            'data' => $list,
-        ]);
+        return response()->json(['status' => true, 'data' => $rooms]);
     }
 
-    /**
-     * GET /api/nguoi-dung/phong-hop-lien-quan
-     */
-    public function phongHopLienQuan(Request $request)
+    public function maPhong()
     {
-        $data = PhongHop::where('trang_thai', 1)
-            ->orderBy('thoi_gian_bat_dau', 'asc')
-            ->get();
+        return $this->phongHopLienQuan();
+    }
 
-        return response()->json([
-            'status' => true,
-            'data' => $data,
-        ]);
+    public function kiemTraPhongHop(Request $request)
+    {
+        $request->validate(['ma_phong' => 'required|string|max:50']);
+        $room = PhongHop::where('ma_phong', $request->input('ma_phong'))->firstOrFail();
+        $request->validate(['id_buoi_hoc' => 'required|integer']);
+        $session = $this->session($request);
+        abort_unless($session->id_lop_hoc === $room->id_lop_hoc, 403);
+
+        return response()->json(['status' => true, 'data' => $room]);
+    }
+
+    public function create(Request $request)
+    {
+        // Rooms are created atomically with an owned class, never from client room/owner IDs.
+        $session = $this->session($request);
+        abort_unless(Auth::guard('sanctum')->user() instanceof GiaoVien, 403);
+
+        return response()->json(['status' => true, 'data' => $session->lopHoc->phongHop]);
     }
 }

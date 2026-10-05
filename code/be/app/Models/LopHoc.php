@@ -35,9 +35,12 @@ class LopHoc extends Model
         'thoi_gian_bat_dau',
         'thoi_gian_ket_thuc',
         'tinh_trang',
+        'recurrence',
+        'recurrence_until',
     ];
 
     protected $casts = [
+        'recurrence_until' => 'date:Y-m-d',
         'hoc_phi' => 'decimal:2',
         'si_so_toi_da' => 'integer',
         'thoi_gian_bat_dau' => 'datetime',
@@ -47,6 +50,11 @@ class LopHoc extends Model
     /**
      * Giáo viên phụ trách lớp
      */
+    public function buoiHocs(): HasMany
+    {
+        return $this->hasMany(BuoiHoc::class, 'id_lop_hoc');
+    }
+
     public function giaoVien(): BelongsTo
     {
         return $this->belongsTo(GiaoVien::class, 'id_giao_vien');

@@ -188,6 +188,7 @@
               >
                 <i class="fa-solid fa-chalkboard-user me-2"></i>Giáo viên
               </button>
+              <button type="button" :class="['role-btn', { active: loginForm.role === 'admin' }]" @click="loginForm.role = 'admin'"><i class="fa-solid fa-user-shield me-2"></i>Quản trị</button>
             </div>
           </div>
 
@@ -221,7 +222,7 @@
           </div>
 
           <div class="d-flex justify-content-end mb-4">
-            <a href="javascript:void(0)" class="forgot-link">Quên mật khẩu?</a>
+            <router-link to="/quen-mat-khau" class="forgot-link">Quên mật khẩu?</router-link>
           </div>
 
           <!-- Alert -->
@@ -350,9 +351,8 @@ export default {
       this.loading = true;
 
       try {
-        const endpoint = this.loginForm.role === 'giao_vien'
-          ? `${API_BASE}/giao-vien/login`
-          : `${API_BASE}/hoc-vien/login`;
+        const prefix = { hoc_vien: 'hoc-vien', giao_vien: 'giao-vien', admin: 'admin' }[this.loginForm.role];
+        const endpoint = `${API_BASE}/${prefix}/login`;
 
         const res = await axios.post(endpoint, {
           email: this.loginForm.email,
@@ -362,7 +362,8 @@ export default {
         if (res.data.status) {
           // Backend trả về: { status, message, token, user }
           const token = res.data.token;
-          const user = res.data.user;
+          const user = { ...(res.data.user || res.data.admin) };
+          delete user.du_lieu_khuon_mat;
           const role = this.loginForm.role;
 
           // Lưu token và role vào localStorage
@@ -378,6 +379,8 @@ export default {
             const redirectTo = this.$route.query.redirect;
             if (redirectTo) {
               this.$router.push(redirectTo);
+            } else if (role === 'admin') {
+              this.$router.push('/admin/danh-muc');
             } else if (role === 'giao_vien') {
               this.$router.push('/ho-so-giang-vien');
             } else {

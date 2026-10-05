@@ -135,21 +135,7 @@ export default {
         }
         return
       }
-      // Gọi API đăng ký - Sanctum middleware sẽ tự kiểm tra role HocVien
-      this.registeringId = lop.id
-      try {
-        const res = await lichHocService.dangKyLop(lop.id)
-        if (res.status) {
-          alert(res.message)
-          this.loadData()
-        } else {
-          alert(res.message || 'Lỗi.')
-        }
-      } catch (e) {
-        alert(e.message || 'Lỗi.')
-      } finally {
-        this.registeringId = null
-      }
+      this.$router.push({ path: '/hoc-vien/dang-ky-lop', query: { id_mon_hoc: lop.id_mon_hoc, class: lop.id } })
     },
     formatDate(iso) {
       if (!iso) return ''

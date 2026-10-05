@@ -1,7 +1,7 @@
 export const API_BASE = (import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8000/api').replace(/\/$/, '');
 
 export async function logout() {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('token') || localStorage.getItem('edulink_token');
   const role = localStorage.getItem('role');
   const prefix = { hoc_vien: 'hoc-vien', giao_vien: 'giao-vien', admin: 'admin' }[role];
   if (token) {
@@ -15,5 +15,5 @@ export async function logout() {
       throw new Error('Chưa đăng xuất được. Vui lòng thử lại.');
     }
   }
-  for (const key of ['token', 'role', 'user']) localStorage.removeItem(key);
+  for (const key of ['token', 'role', 'user', 'edulink_token', 'edulink_user', 'edulink_token_type']) localStorage.removeItem(key);
 }

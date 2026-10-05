@@ -49,3 +49,11 @@ test('logout keeps the session on a network error', async t => {
   await assert.rejects(logout());
   assert.equal(values.get('token'), 'test-token');
 });
+
+test('logout clears legacy session aliases after server revocation', async t => {
+  const values = session(t);
+  values.set('edulink_token', 'test-token'); values.set('edulink_user', '{}'); values.set('edulink_token_type', 'Bearer');
+  t.mock.method(globalThis, 'fetch', async () => ({ ok: true, status: 200 }));
+  await logout();
+  assert.equal(values.size, 0);
+});

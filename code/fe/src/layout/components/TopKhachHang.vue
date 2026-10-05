@@ -11,13 +11,13 @@
 
       <!-- Navigation Links -->
       <nav class="nav-links">
-        <router-link to="/my-schedule" class="nav-item">Lịch rảnh</router-link>
+        <router-link v-if="userRole !== 'admin'" to="/my-schedule" class="nav-item">Lịch rảnh</router-link>
         <router-link v-if="userRole === 'hoc_vien'" to="/hoc-vien/dang-ky-lop" class="nav-item">Đăng ký lớp</router-link>
-        <router-link :to="userRole === 'giao_vien' ? '/giao-vien/quan-ly-lop' : '/hoc-vien/lop-cua-toi'" class="nav-item">Lớp học</router-link>
+        <router-link v-if="userRole !== 'admin'" :to="!isLoggedIn ? '/client/danh-sach-lop' : userRole === 'giao_vien' ? '/giao-vien/quan-ly-lop' : '/hoc-vien/lop-cua-toi'" class="nav-item">Lớp học</router-link>
         <router-link v-if="userRole === 'hoc_vien'" to="/hoc-vien/lich-hoc" class="nav-item">Lịch học</router-link>
         <router-link v-else-if="userRole === 'giao_vien'" to="/giao-vien/lich-day" class="nav-item">Lịch dạy</router-link>
         
-        <a href="/#news" class="nav-item">Tin tức</a>
+        <router-link v-if="isLoggedIn && userRole !== 'admin'" to="/hoc-thu-cua-toi" class="nav-item">Học thử</router-link><router-link v-if="isLoggedIn && userRole !== 'admin'" to="/tu-van" class="nav-item">Tư vấn</router-link><router-link v-if="isLoggedIn && userRole !== 'admin'" to="/tro-ly-ai" class="nav-item">Trợ lý AI</router-link><router-link v-if="userRole === 'admin'" to="/admin/danh-muc" class="nav-item">Danh mục</router-link><router-link v-if="userRole === 'admin'" to="/admin/thanh-toan" class="nav-item">Đối soát</router-link>
       </nav>
 
       <!-- Header Actions -->
@@ -37,13 +37,13 @@
           <div v-if="showUserDropdown" class="user-dropdown-menu">
             <div class="dropdown-header">
               <strong>{{ userName }}</strong>
-              <span class="d-block text-muted" style="font-size:11px">{{ userRole === 'giao_vien' ? 'Giáo viên' : 'Học viên' }}</span>
+              <span class="d-block text-muted" style="font-size:11px">{{ userRole === 'admin' ? 'Quản trị viên' : userRole === 'giao_vien' ? 'Giáo viên' : 'Học viên' }}</span>
             </div>
             <div class="dropdown-divider"></div>
-            <router-link to="/client/profile" class="dropdown-item" @click="showUserDropdown = false">
-              <i class="fa-regular fa-user me-2"></i> Thông tin tài khoản
+            <router-link :to="userRole === 'admin' ? '/admin/danh-muc' : '/client/profile'" class="dropdown-item" @click="showUserDropdown = false">
+              <i class="fa-regular fa-user me-2"></i> {{ userRole === 'admin' ? 'Quản trị hệ thống' : 'Thông tin tài khoản' }}
             </router-link>
-            <router-link :to="userRole === 'giao_vien' ? '/giao-vien/lich-day' : '/hoc-vien/lich-hoc'" class="dropdown-item" @click="showUserDropdown = false">
+            <router-link v-if="userRole !== 'admin'" :to="userRole === 'giao_vien' ? '/giao-vien/lich-day' : '/hoc-vien/lich-hoc'" class="dropdown-item" @click="showUserDropdown = false">
               <i class="fa-regular fa-calendar-days me-2 text-primary"></i> Lịch học
             </router-link>
             <div class="dropdown-divider"></div>
@@ -54,6 +54,7 @@
         </div>
       </div>
     </div>
+    <p v-if="sessionError" class="alert alert-danger mb-0 rounded-0" role="alert">{{ sessionError }}</p>
   </header>
 </template>
 
@@ -71,6 +72,7 @@ export default {
       userName: '',
       userRole: '',
       userData: null,
+      sessionError: '',
     };
   },
   mounted() {
@@ -132,9 +134,13 @@ export default {
       }
     },
     async logout() {
+      this.sessionError = '';
       try {
         await logoutSession();
-      } catch (err) {}
+      } catch (err) {
+        this.sessionError = err.message || 'Chưa đăng xuất được. Vui lòng thử lại.';
+        return;
+      }
       localStorage.removeItem("token");
       localStorage.removeItem("edulink_token");
       localStorage.removeItem("role");

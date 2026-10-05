@@ -2,147 +2,76 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\GiaoVien;
 use App\Models\ThoiGianRanh;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ThoiGianRanhController extends Controller
 {
-    public function getGiaoVienSchedule(Request $request)
+    public function getGiaoVienSchedule()
     {
-        // Middleware đã xác thực, lấy user từ request
-        $giaoVien = Auth::guard('sanctum')->user();
-        if (!$giaoVien) {
-            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
-        }
+        return $this->read();
+    }
 
-        $schedules = ThoiGianRanh::where('id_giao_vien', $giaoVien->id)
-            ->where('loai_nguoi_dung', 'giao_vien')
-            ->get();
-
-        return response()->json([
-            'status' => true,
-            'data' => $schedules
-        ]);
+    public function getHocVienSchedule()
+    {
+        return $this->read();
     }
 
     public function updateGiaoVienSchedule(Request $request)
     {
-        $giaoVien = Auth::guard('sanctum')->user();
-        if (!$giaoVien) {
-            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
-        }
-
-        $request->validate([
-            'schedules' => 'present|array',
-            'schedules.*.ngay_trong_tuan' => 'required|integer|min:0|max:6',
-            'schedules.*.thoi_gian_bat_dau' => 'required',
-            'schedules.*.thoi_gian_ket_thuc' => 'required',
-        ]);
-
-        ThoiGianRanh::where('id_giao_vien', $giaoVien->id)
-            ->where('loai_nguoi_dung', 'giao_vien')
-            ->delete();
-
-        $insertData = [];
-        foreach ($request->schedules as $schedule) {
-            $insertData[] = [
-                'id_giao_vien'       => $giaoVien->id,
-                'id_hoc_vien'        => null,
-                'loai_nguoi_dung'    => 'giao_vien',
-                'ngay_trong_tuan'    => $schedule['ngay_trong_tuan'],
-                'thoi_gian_bat_dau'  => $schedule['thoi_gian_bat_dau'],
-                'thoi_gian_ket_thuc' => $schedule['thoi_gian_ket_thuc'],
-                'trang_thai'         => 'active',
-                'created_at'         => now(),
-                'updated_at'         => now(),
-            ];
-        }
-
-        if (!empty($insertData)) {
-            ThoiGianRanh::insert($insertData);
-        }
-
-        return response()->json([
-            'status'  => true,
-            'message' => 'Cập nhật lịch rảnh thành công'
-        ]);
-    }
-
-    public function getHocVienSchedule(Request $request)
-    {
-        $hocVien = Auth::guard('hoc_vien')->user();
-
-        // Fallback: thử lấy từ sanctum guard nếu hoc_vien guard không nhận
-        if (!$hocVien) {
-            $sanctumUser = Auth::guard('sanctum')->user();
-            if ($sanctumUser instanceof \App\Models\HocVien) {
-                $hocVien = $sanctumUser;
-            }
-        }
-
-        if (!$hocVien) {
-            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
-        }
-
-        $schedules = ThoiGianRanh::where('id_hoc_vien', $hocVien->id)
-            ->where('loai_nguoi_dung', 'hoc_vien')
-            ->get();
-
-        return response()->json([
-            'status' => true,
-            'data'   => $schedules
-        ]);
+        return $this->replace($request);
     }
 
     public function updateHocVienSchedule(Request $request)
     {
-        $hocVien = Auth::guard('hoc_vien')->user();
+        return $this->replace($request);
+    }
 
-        if (!$hocVien) {
-            $sanctumUser = Auth::guard('sanctum')->user();
-            if ($sanctumUser instanceof \App\Models\HocVien) {
-                $hocVien = $sanctumUser;
+    private function scope()
+    {
+        $actor = Auth::guard('sanctum')->user();
+        $teacher = $actor instanceof GiaoVien;
+
+        return ThoiGianRanh::where('loai_nguoi_dung', $teacher ? 'giao_vien' : 'hoc_vien')
+            ->where($teacher ? 'id_giao_vien' : 'id_hoc_vien', $actor->id);
+    }
+
+    private function read()
+    {
+        return response()->json(['status' => true, 'data' => $this->scope()->orderBy('ngay_trong_tuan')->orderBy('thoi_gian_bat_dau')->get()]);
+    }
+
+    private function replace(Request $request)
+    {
+        $data = $request->validate([
+            'schedules' => 'present|array|max:100',
+            'schedules.*.ngay_trong_tuan' => 'required|integer|between:0,6',
+            'schedules.*.thoi_gian_bat_dau' => ['required', 'regex:/^([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/'],
+            'schedules.*.thoi_gian_ket_thuc' => ['required', 'regex:/^([01][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/'],
+        ]);
+        foreach ($data['schedules'] as $i => $slot) {
+            if (strtotime($slot['thoi_gian_bat_dau']) >= strtotime($slot['thoi_gian_ket_thuc'])) {
+                throw ValidationException::withMessages(["schedules.$i.thoi_gian_ket_thuc" => 'Thời gian kết thúc phải sau bắt đầu.']);
             }
         }
+        $actor = Auth::guard('sanctum')->user();
+        $teacher = $actor instanceof GiaoVien;
+        DB::transaction(function () use ($actor, $teacher, $data) {
+            $actor->newQuery()->whereKey($actor->id)->lockForUpdate()->firstOrFail();
+            $this->scope()->delete();
+            foreach ($data['schedules'] as $slot) {
+                ThoiGianRanh::create([
+                    ...$slot, 'loai_nguoi_dung' => $teacher ? 'giao_vien' : 'hoc_vien',
+                    'id_giao_vien' => $teacher ? $actor->id : null,
+                    'id_hoc_vien' => $teacher ? null : $actor->id, 'trang_thai' => 'hoat_dong',
+                ]);
+            }
+        }, 5);
 
-        if (!$hocVien) {
-            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
-        }
-
-        $request->validate([
-            'schedules' => 'present|array',
-            'schedules.*.ngay_trong_tuan' => 'required|integer|min:0|max:6',
-            'schedules.*.thoi_gian_bat_dau' => 'required',
-            'schedules.*.thoi_gian_ket_thuc' => 'required',
-        ]);
-
-        ThoiGianRanh::where('id_hoc_vien', $hocVien->id)
-            ->where('loai_nguoi_dung', 'hoc_vien')
-            ->delete();
-
-        $insertData = [];
-        foreach ($request->schedules as $schedule) {
-            $insertData[] = [
-                'id_giao_vien'       => null,
-                'id_hoc_vien'        => $hocVien->id,
-                'loai_nguoi_dung'    => 'hoc_vien',
-                'ngay_trong_tuan'    => $schedule['ngay_trong_tuan'],
-                'thoi_gian_bat_dau'  => $schedule['thoi_gian_bat_dau'],
-                'thoi_gian_ket_thuc' => $schedule['thoi_gian_ket_thuc'],
-                'trang_thai'         => 'active',
-                'created_at'         => now(),
-                'updated_at'         => now(),
-            ];
-        }
-
-        if (!empty($insertData)) {
-            ThoiGianRanh::insert($insertData);
-        }
-
-        return response()->json([
-            'status'  => true,
-            'message' => 'Cập nhật lịch rảnh thành công'
-        ]);
+        return response()->json(['status' => true, 'message' => 'Đã lưu lịch rảnh.']);
     }
 }

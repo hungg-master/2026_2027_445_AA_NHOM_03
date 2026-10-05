@@ -73,7 +73,7 @@
                 <td v-for="day in weekDays" :key="day.key + '_' + hour" class="slot-cell">
                   <div
                     v-for="lop in getLopInSlot(day, hour)"
-                    :key="lop.id"
+                    :key="lop.id_buoi_hoc"
                     :class="['session-pill', 'pill-' + lop.hinh_thuc]"
                     @click="openLopDetail(lop)"
                   >
@@ -96,7 +96,7 @@
             <span class="result-count">{{ dsLopHoc.length }} buổi dạy</span>
           </div>
           <div class="session-cards-list">
-            <div v-for="lop in dsLopHoc" :key="lop.id" class="session-card" :class="'accent-' + getAccent(lop.hinh_thuc)">
+            <div v-for="lop in dsLopHoc" :key="lop.id_buoi_hoc" class="session-card" :class="'accent-' + getAccent(lop.hinh_thuc)">
               <div class="session-date-box">
                 <span class="date-month">{{ formatMonth(lop.thoi_gian_bat_dau) }}</span>
                 <span class="date-day">{{ formatDay(lop.thoi_gian_bat_dau) }}</span>
@@ -128,7 +128,7 @@
                 </div>
               </div>
               <div class="session-actions">
-                <router-link :to="`/giao-vien/lop-hoc/${lop.id}`" class="btn btn-manage">Chi tiết</router-link>
+                <button class="btn btn-manage" @click="openLopDetail(lop)">Chi tiết</button>
               </div>
             </div>
           </div>
@@ -158,7 +158,7 @@
           </div>
           <div class="detail-row" v-if="selectedLop.hinh_thuc === 'online' && selectedLop.link_online">
             <span class="detail-label">Link:</span>
-            <a :href="selectedLop.link_online" target="_blank" class="detail-value text-primary">{{ selectedLop.link_online }}</a>
+            <router-link :to="{ name: 'phong-hoc', params: { id: selectedLop.id_buoi_hoc }, query: { session: selectedLop.id_buoi_hoc } }" class="detail-value text-primary">Xác thực Face ID và vào phòng</router-link>
           </div>
           <h4 class="student-list-title">Danh sách học viên ({{ selectedLop?.dang_ky_lops?.length || 0 }}/{{ selectedLop?.si_so_toi_da }})</h4>
           <ul class="student-list" v-if="selectedLop?.dang_ky_lops?.length">
@@ -168,9 +168,16 @@
             </li>
           </ul>
           <p v-else class="text-muted">Chưa có học viên đăng ký.</p>
+          <section v-if="canComplete(selectedLop)" class="card p-3 mt-3">
+            <h5>Hoàn thành buổi học</h5>
+            <p v-if="selectedLop.hinh_thuc === 'online'">Điểm danh được lấy từ lịch sử kết nối phòng đã xác thực.</p>
+            <template v-else><p>Chọn học viên đã có mặt tại buổi học trực tiếp:</p><label v-for="dk in (selectedLop.dang_ky_lops || []).filter(row => row.trang_thai === 'da_xac_nhan')" :key="dk.id" class="d-block"><input v-model="attendedStudentIds" type="checkbox" :value="dk.id_hoc_vien" /> {{ dk.hoc_vien?.ho_ten || 'Học viên #' + dk.id_hoc_vien }}</label></template>
+            <p v-if="completionError" class="text-danger" role="alert">{{ completionError }}</p>
+            <button class="btn btn-primary mt-2" :disabled="completing" @click="completeSession">{{ completing ? 'Đang lưu…' : 'Xác nhận buổi học đã hoàn thành' }}</button>
+          </section>
         </div>
         <div class="modal-footer">
-          <router-link v-if="selectedLop" :to="`/giao-vien/lop-hoc/${selectedLop.id}`" class="btn btn-primary">Quản lý lớp</router-link>
+          <router-link v-if="selectedLop" to="/giao-vien/quan-ly-lop" class="btn btn-primary">Quản lý lớp</router-link>
           <button class="btn btn-outline" @click="showModal = false">Đóng</button>
         </div>
       </div>
@@ -181,6 +188,9 @@
 <script>
 import { lichDayService } from '../../services/lichDayService'
 import { lopHocService } from '../../services/lopHocService'
+import { calendarSession, dateParts } from '../../services/flowHelpers'
+import http from '../../services/http'
+import { accepted } from '../../services/productContract'
 
 export default {
   name: 'LichDayGiaoVien',
@@ -195,6 +205,7 @@ export default {
       },
       dsLopHoc: [],
       selectedLop: null,
+      attendedStudentIds: [], completing: false, completionError: '',
       showModal: false,
       weekDays: [],
       timeSlots: ['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'],
@@ -213,36 +224,7 @@ export default {
       return `${y}-${m}-${day}`
     },
 
-    parseDateParts(iso) {
-      if (!iso) return null
-      const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/)
-      if (m) {
-        return {
-          year: parseInt(m[1]),
-          month: parseInt(m[2]),
-          day: parseInt(m[3]),
-          hour: parseInt(m[4]),
-          minute: parseInt(m[5]),
-          dateKey: `${m[1]}-${m[2]}-${m[3]}`,
-          timeStr: `${m[4]}:${m[5]}`,
-        }
-      }
-      const d = new Date(iso)
-      const y = d.getFullYear()
-      const mo = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      const h = String(d.getHours()).padStart(2, '0')
-      const mi = String(d.getMinutes()).padStart(2, '0')
-      return {
-        year: y,
-        month: parseInt(mo),
-        day: parseInt(day),
-        hour: parseInt(h),
-        minute: parseInt(mi),
-        dateKey: `${y}-${mo}-${day}`,
-        timeStr: `${h}:${mi}`,
-      }
-    },
+    parseDateParts(iso) { return dateParts(iso) },
 
     /** Set khoảng ngày mặc định: tuần hiện tại */
     setDefaultFilters() {
@@ -290,7 +272,7 @@ export default {
       try {
         const res = await lichDayService.getLichDay(this.filters)
         if (res.status) {
-          this.dsLopHoc = res.data || []
+          this.dsLopHoc = (res.data || []).map(calendarSession)
           if (this.viewMode === 'week') this.groupByWeek()
         } else {
           this.dsLopHoc = []
@@ -323,9 +305,11 @@ export default {
     /** Mở modal chi tiết */
     async openLopDetail(lop) {
       try {
-        const res = await lopHocService.getChiTietLop(lop.id)
+        const res = await lopHocService.getChiTietLop(lop.lop_hoc?.id || lop.id_lop_hoc)
         if (res.status) {
-          this.selectedLop = res.data
+          this.selectedLop = { ...res.data, id_buoi_hoc: lop.id_buoi_hoc, trang_thai_buoi: lop.trang_thai_buoi, session_status: lop.trang_thai, thoi_gian_bat_dau: lop.thoi_gian_bat_dau, thoi_gian_ket_thuc: lop.thoi_gian_ket_thuc }
+          this.attendedStudentIds = []
+          this.completionError = ''
           this.showModal = true
         } else {
           alert(res.message || 'Lỗi tải chi tiết.')
@@ -336,6 +320,19 @@ export default {
     },
 
     /** Helpers format */
+    canComplete(session) {
+      return !!session?.id_buoi_hoc && new Date(session.thoi_gian_ket_thuc).getTime() < Date.now() && !['completed','cancelled'].includes(session.session_status) && !['da_huy','cancelled'].includes(session.trang_thai_buoi)
+    },
+    async completeSession() {
+      if (this.completing || !this.canComplete(this.selectedLop)) return
+      this.completing = true; this.completionError = ''
+      try {
+        await accepted(http.post(`/giao-vien/buoi-hoc/${this.selectedLop.id_buoi_hoc}/complete`, { attended_student_ids: this.selectedLop.hinh_thuc === 'offline' ? this.attendedStudentIds : [] }))
+        this.showModal = false
+        await this.loadData()
+      } catch (error) { this.completionError = error.message || 'Chưa thể hoàn thành buổi học.' }
+      finally { this.completing = false }
+    },
     formatTime(iso) {
       const p = this.parseDateParts(iso)
       return p ? p.timeStr : ''

@@ -24,12 +24,19 @@ const AUTH_REQUIRED_ROUTES = [
 ];
 
 const routes = [
+  { path: '/quen-mat-khau', component: () => import('../components/EduLink/PasswordReset.vue'), meta: { layout: 'blank', public: true } },
+  { path: '/reset-password', component: () => import('../components/EduLink/PasswordReset.vue'), meta: { layout: 'blank', public: true } },
+  { path: '/hoc-thu-cua-toi', component: () => import('../components/EduLink/TrialManagement.vue'), meta: { layout: 'client', requiresAuth: true } },
+  { path: '/tu-van', component: () => import('../components/EduLink/ConsultationChat.vue'), meta: { layout: 'client', requiresAuth: true } },
+  { path: '/tro-ly-ai', component: () => import('../components/EduLink/AiAssistant.vue'), meta: { layout: 'client', requiresAuth: true } },
+  { path: '/admin/danh-muc', component: () => import('../components/EduLink/AdminCatalog.vue'), meta: { layout: 'client', requiresAuth: true, role: 'admin' } },
+  { path: '/admin/thanh-toan', component: () => import('../components/EduLink/AdminPayments.vue'), meta: { layout: 'client', requiresAuth: true, role: 'admin' } },
   {
     path: '/logout',
     component: () => import('../components/EduLink/LandingPage.vue'),
     meta: { layout: 'blank' },
   },
-  { path: '/face-id', redirect: '/hoc-vien#face-id-section' },
+  { path: '/face-id', redirect: '/client/profile#faceid' },
   {
     path: "/",
     name: "trang-chu",
@@ -54,7 +61,7 @@ const routes = [
   {
     path: "/giao-vien",
     name: "giao-vien",
-    component: () => import("../components/EduLink/TeacherProfile.vue"),
+    component: () => import("../components/EduLink/TeacherDirectory.vue"),
     meta: { layout: "client", public: true }
   },
   { path: "/teacher-profile", redirect: "/giao-vien" },
@@ -78,7 +85,7 @@ const routes = [
   {
     path: "/my-classes",
     name: "my-classes",
-    component: () => import("../components/EduLink/ClassManagement.vue"),
+    component: () => import("../components/EduLink/AccountClasses.vue"),
     meta: { layout: "client", requiresAuth: true }
   },
   { path: "/classes", redirect: "/my-classes" },
@@ -105,7 +112,7 @@ const routes = [
   {
     path: "/ho-so-giang-vien",
     name: "ho-so-giang-vien",
-    component: () => import("../components/EduLink/TeacherDashboard.vue"),
+    component: () => import("../components/EduLink/ClientProfile.vue"),
     meta: { layout: "client", requiresAuth: true, role: "giao_vien" }
   },
   { path: "/teacher-dashboard", redirect: "/ho-so-giang-vien" },
@@ -215,7 +222,7 @@ router.beforeEach(async (to, from, next) => {
   const targetRecord = to.matched.find((record) => record.meta.role);
   if (targetRecord && token) {
     const requiredRole = targetRecord.meta.role;
-    if (requiredRole && userRole && requiredRole !== userRole) {
+    if (requiredRole && requiredRole !== userRole) {
       // Học viên không được vào trang của giáo viên
       if (userRole === 'hoc_vien') {
         next('/hoc-vien');
@@ -226,6 +233,8 @@ router.beforeEach(async (to, from, next) => {
         next('/ho-so-giang-vien');
         return;
       }
+      next('/');
+      return;
     }
   }
 

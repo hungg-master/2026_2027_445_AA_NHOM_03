@@ -12,6 +12,9 @@ class ChiTietPhongHop extends Model
     protected $table = 'chi_tiet_phong_hops';
 
     protected $fillable = [
+        'id_buoi_hoc',
+        'loai_nguoi_dung',
+        'attendance_source',
         'id_phong_hop',
         'id_nguoi_dung',
         'xac_thuc_khuon_mat',
