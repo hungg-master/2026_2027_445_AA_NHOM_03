@@ -5,87 +5,35 @@ namespace App\Http\Controllers\GiaoVien;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DangKyLop\DuyetHocVienDangKyRequest;
 use App\Models\DangKyLop;
+use App\Models\HocVien;
 use App\Models\LopHoc;
-use Illuminate\Http\Request;
+use App\Services\EnrollmentService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
-/**
- * Controller: Duyệt học viên đăng ký (phía Giáo viên)
- */
 class DuyetHocVienController extends Controller
 {
-    /**
-     * POST /api/giao-vien/lop-hoc/{id}/duyet-hoc-vien
-     * Body: id_dang_ky, hanh_dong (duyet|tu_choi|huy)
-     */
-    public function duyet(DuyetHocVienDangKyRequest $request, $lopHocId)
+    public function duyet(DuyetHocVienDangKyRequest $request, int $lopHocId, EnrollmentService $service)
     {
-        try {
-            $gv = Auth::guard('sanctum')->user();
-
-            // Kiểm tra lớp học có thuộc GV này không
-            $lopHoc = LopHoc::where('id_giao_vien', $gv->id)
-                ->where('id', $lopHocId)
-                ->first();
-
-            if (!$lopHoc) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Không tìm thấy lớp học hoặc bạn không có quyền.',
-                ], 404);
+        $result = DB::transaction(function () use ($request, $lopHocId, $service) {
+            $actor = Auth::guard('sanctum')->user();
+            $row = DangKyLop::whereKey($request->integer('id_dang_ky'))->where('id_lop_hoc', $lopHocId)->firstOrFail();
+            $student = HocVien::whereKey($row->id_hoc_vien)->lockForUpdate()->firstOrFail();
+            $class = LopHoc::whereKey($lopHocId)->where('id_giao_vien', $actor->id)->lockForUpdate()->firstOrFail();
+            $row = DangKyLop::whereKey($row->id)->lockForUpdate()->firstOrFail();
+            $approve = $request->input('hanh_dong') === 'duyet';
+            if ($approve && ! in_array($row->trang_thai, ['da_xac_nhan', 'da_thanh_toan'])) {
+                abort_if($row->trang_thai === 'da_huy', 409, 'Đăng ký đã hủy; học viên cần đăng ký lại.');
+                abort_if($student->is_block || $student->tinh_trang != 1 || ! $student->is_active, 403);
+                $service->check($student, $class, $row->id);
+                $row->update(['trang_thai' => 'da_xac_nhan']);
+            } elseif (! $approve && $row->trang_thai !== 'da_huy') {
+                $row->update(['trang_thai' => 'da_huy']);
             }
 
-            $dangKy = DangKyLop::where('id', $request->id_dang_ky)
-                ->where('id_lop_hoc', $lopHocId)
-                ->first();
+            return $row->load('hocVien');
+        }, 5);
 
-            if (!$dangKy) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Không tìm thấy đăng ký của lớp này.',
-                ], 404);
-            }
-
-            // Mapping hành động -> trạng thái
-            $map = [
-                'duyet' => 'da_xac_nhan',
-                'tu_choi' => 'da_huy',
-                'huy' => 'da_huy',
-            ];
-
-            $trangThaiMoi = $map[$request->hanh_dong];
-
-            // Nếu duyệt thì kiểm tra sĩ số tối đa
-            if ($trangThaiMoi === 'da_xac_nhan') {
-                $soHVDaDuyet = $lopHoc->dangKyLops()
-                    ->whereIn('trang_thai', ['da_xac_nhan', 'da_thanh_toan'])
-                    ->count();
-                if ($soHVDaDuyet >= $lopHoc->si_so_toi_da) {
-                    return response()->json([
-                        'status' => false,
-                        'message' => 'Lớp đã đủ sĩ số tối đa!',
-                    ], 400);
-                }
-            }
-
-            $dangKy->trang_thai = $trangThaiMoi;
-            $dangKy->save();
-            $dangKy->load('hocVien');
-
-            return response()->json([
-                'status' => true,
-                'message' => $trangThaiMoi === 'da_xac_nhan'
-                    ? 'Đã duyệt học viên vào lớp!'
-                    : 'Đã cập nhật trạng thái đăng ký.',
-                'data' => $dangKy,
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Duyet HV error: ' . $e->getMessage());
-            return response()->json([
-                'status' => false,
-                'message' => 'Duyệt thất bại: ' . $e->getMessage(),
-            ], 500);
-        }
+        return response()->json(['status' => true, 'data' => $result]);
     }
 }

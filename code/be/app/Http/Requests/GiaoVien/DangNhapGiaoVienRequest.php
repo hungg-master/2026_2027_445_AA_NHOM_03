@@ -11,10 +11,17 @@ class DangNhapGiaoVienRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('email'))) {
+            $this->merge(['email' => mb_strtolower(trim($this->input('email')))]);
+        }
+    }
+
     public function rules(): array
     {
         return [
-            'email'    => 'required|email',
+            'email' => 'required|email',
             'password' => 'required',
         ];
     }
@@ -22,8 +29,8 @@ class DangNhapGiaoVienRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'email.required'    => 'Email không được để trống',
-            'email.email'       => 'Email không đúng định dạng',
+            'email.required' => 'Email không được để trống',
+            'email.email' => 'Email không đúng định dạng',
             'password.required' => 'Mật khẩu không được để trống',
         ];
     }

@@ -83,9 +83,9 @@
               <label class="d-block mt-3">Môn học
                 <input v-model.trim="form.subject" class="form-control" required maxlength="150" />
               </label>
-              <p class="mt-3">Đã chọn {{ selectedSlots.length }} khung giờ.</p>
+<p v-if="selectedStart" class="mt-3">Buổi đã chọn: {{ new Date(selectedStart).toLocaleString('vi-VN') }} → {{ new Date(selectedEnd).toLocaleTimeString('vi-VN') }}</p><p v-else class="mt-3">Đã chọn {{ selectedSlots.length }} khung giờ.</p><router-link to="/my-schedule">Tìm giảng viên và chọn khung giờ cụ thể</router-link>
               <p v-if="message" role="status">{{ message }}</p>
-              <button class="btn btn-primary w-100" :disabled="loading || !selectedSlots.length">{{ loading ? 'Đang gửi…' : 'Gửi yêu cầu học thử' }}</button>
+              <button class="btn btn-primary w-100" :disabled="loading || (!selectedStart && !selectedSlots.length)">{{ loading ? 'Đang gửi…' : 'Gửi yêu cầu học thử' }}</button>
             </form>
           </aside>
         </div>
@@ -95,7 +95,7 @@
 </template>
 
 <script>
-import { API_BASE } from '../../services/api';
+import product from '../../services/productService';
 import profileService from '../../services/profileService';
 
 export default {
@@ -110,7 +110,7 @@ export default {
         "6:00 PM", "7:00 PM", "8:00 PM", "9:00 PM"
       ],
       selectedSlots: [],
-      loading: false,
+      loading: false, selectedStart: '', selectedEnd: '',
       message: "",
       isDragging: false,
       dragMode: "select",
@@ -128,6 +128,7 @@ export default {
     } else {
       this.form.subject = "Học thử Tổng quát";
     }
+    this.selectedStart = this.$route.query.start || ''; this.selectedEnd = this.$route.query.end || '';
     this.loadUserInfo();
   },
   methods: {
@@ -208,19 +209,15 @@ export default {
       this.isDragging = false;
     },
     async submitTrialBooking() {
-      if (this.loading || !this.selectedSlots.length) return;
+      if (this.loading || (!this.selectedStart && !this.selectedSlots.length)) return;
       this.loading = true;
       this.message = '';
       try {
-        const response = await fetch(API_BASE + '/hoc-thu', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ ...this.form, schedules: this.selectedSlots })
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(Object.values(data.errors || {}).flat()[0] || data.message);
+        const payload = { ...this.form, schedules: this.selectedSlots };
+        if (this.selectedStart) Object.assign(payload, { id_mon_hoc: Number(this.$route.query.id_mon_hoc), id_giao_vien: Number(this.$route.query.id_giao_vien), thoi_gian_bat_dau: this.selectedStart, thoi_gian_ket_thuc: this.selectedEnd });
+        const data = await product.trialRequest(payload);
         this.message = data.message;
-        this.selectedSlots = [];
+        this.selectedSlots = []; this.selectedStart = ''; this.selectedEnd = '';
       } catch (error) {
         this.message = error.message || 'Không thể gửi yêu cầu. Vui lòng thử lại.';
       } finally {

@@ -13,12 +13,19 @@
             </div>
         </header>
 
+        <div id="remote-audio" hidden></div>
+        <div v-if="state === 'verification' || state === 'failed'" class="position-absolute top-50 start-50 translate-middle z-3" style="width:340px;max-width:95vw;">
+          <FaceProof v-if="sessionId" purpose="room" :target="{ id_buoi_hoc: sessionId }" @verified="connect" @cancel="roiPhong" />
+          <p v-else class="alert alert-danger">Chưa chọn buổi học. Hãy quay lại lịch học để chọn buổi.</p>
+        </div>
+        <div v-if="error || mediaError" class="alert alert-warning position-absolute top-0 start-50 translate-middle-x mt-5 z-3" role="alert">{{ error }} {{ mediaError }}</div>
+        <button v-if="audioPlaybackBlocked && state === 'connected'" class="btn btn-warning position-absolute top-0 end-0 mt-5 z-3" @click="startAudio">Bật âm thanh phòng học</button>
         <main class="flex-grow-1 position-relative p-2 p-md-4 mt-5 d-flex flex-column">
             <div id="video-grid" class="video-grid w-100 flex-grow-1"
                 :style="{ paddingRight: isChatOpen ? '350px' : '0', transition: 'padding 0.3s ease' }">
                 <div id="local-video-wrapper" class="video-wrapper shadow-lg">
                     <div class="w-100 h-100 bg-secondary position-relative">
-                        <div v-if="!cameraReady" class="position-absolute top-50 start-50 translate-middle z-3">
+                        <div v-if="state === 'connecting'" class="position-absolute top-50 start-50 translate-middle z-3">
                             <span class="spinner-border text-light"></span>
                         </div>
 
@@ -145,7 +152,7 @@
                         placeholder="Nhập tin nhắn..." autocomplete="off">
                     <button type="submit"
                         class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center"
-                        style="width: 40px; height: 40px; flex-shrink: 0;" :disabled="!newMessage.trim()">
+                        style="width: 40px; height: 40px; flex-shrink: 0;" :disabled="!newMessage.trim() || sending || state !== 'connected'">
                         <i class='bx bx-send'></i>
                     </button>
                 </form>
@@ -202,455 +209,176 @@
 </template>
 
 <script>
-import axios from 'axios';
-import { Room, RoomEvent, Track } from 'livekit-client';
 import { markRaw } from 'vue';
+import FaceProof from './FaceProof.vue';
+import product from '../../services/productService';
+import http from '../../services/http';
+import { accepted } from '../../services/productContract';
+import { attachTrack, disposeRoom, sendRoomMessage } from '../../services/flowHelpers';
 
 export default {
-    name: 'PhongHopVideo',
-    data() {
-        return {
-            roomId: this.$route.params.id || this.$route.params.maPhong || 'PHONG-01',
-            tenPhongHoc: '',
-            phongHopId: null,
-            room: null,
-            cameraReady: false,
-            isMicOn: true,
-            isCameraOn: true,
-            isSharingScreen: false,
-            localStream: null,
-            currentUserName: '',
-
-            // State cho Cài đặt thiết bị
-            showSettings: false,
-            audioInputs: [],
-            audioOutputs: [],
-            selectedMic: '',
-            selectedSpeaker: '',
-
-            // State cho Chat
-            isChatOpen: false,
-            chatMessages: [],
-            newMessage: '',
-
-            // State cho danh sách người tham gia
-            isParticipantsOpen: false,
-            participants: []
-        };
+  name: 'PhongHopVideo',
+  components: { FaceProof },
+  data() {
+    return {
+      roomId: this.$route.params.id, sessionId: Number(this.$route.query.session || this.$route.params.id),
+      tenPhongHoc: '', phongHopId: null, room: null, sdk: null,
+      state: 'verification', error: '', mediaError: '', disposed: false, joined: false, leaving: false,
+      cameraReady: false, isMicOn: false, isCameraOn: false, isSharingScreen: false,
+      audioPlaybackBlocked: false,
+      currentUserName: '', showSettings: false, audioInputs: [], audioOutputs: [], selectedMic: '', selectedSpeaker: '',
+      isChatOpen: false, chatMessages: [], newMessage: '', sending: false,
+      isParticipantsOpen: false, participants: [], attachments: [],
+    };
+  },
+  computed: {
+    connectionLabel() { return { verification: 'Chờ xác thực Face ID', connecting: 'Đang kết nối', connected: 'Đã kết nối phòng học', reconnecting: 'Đang kết nối lại', disconnected: 'Đã ngắt kết nối', failed: 'Kết nối thất bại' }[this.state]; }
+  },
+  beforeUnmount() { this.cleanup(); },
+  methods: {
+    async connect(proof) {
+      if (this.state === 'connecting' || this.state === 'connected' || !proof?.verification_id) return;
+      this.error = ''; this.state = 'connecting';
+      try {
+        const result = await product.roomToken(this.sessionId, proof.verification_id);
+        if (this.disposed) return;
+        const data = result.data;
+        if (!data?.token || !data?.server_url) throw new Error('Máy chủ chưa cấp thông tin kết nối phòng học.');
+        this.roomId = data.ma_phong; this.phongHopId = data.id_phong_hop;
+        this.sdk = markRaw(await import('livekit-client'));
+        if (this.disposed) return;
+        const { Room, RoomEvent } = this.sdk;
+        const room = markRaw(new Room({ adaptiveStream: true, dynacast: true }));
+        this.room = room;
+        room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => this.attachRemote(track, participant));
+        room.on(RoomEvent.TrackUnsubscribed, track => track.detach().forEach(node => node.remove()));
+        room.on(RoomEvent.ParticipantConnected, () => this.syncParticipants());
+        room.on(RoomEvent.ParticipantDisconnected, participant => {
+          document.querySelectorAll(`[data-participant="${CSS.escape(participant.sid)}"]`).forEach(node => node.remove());
+          this.syncParticipants();
+        });
+        room.on(RoomEvent.TrackMuted, () => this.syncParticipants());
+        room.on(RoomEvent.TrackUnmuted, () => this.syncParticipants());
+        room.on(RoomEvent.Reconnecting, () => this.state = 'reconnecting');
+        room.on(RoomEvent.Reconnected, () => this.state = 'connected');
+        room.on(RoomEvent.AudioPlaybackStatusChanged, () => this.audioPlaybackBlocked = !room.canPlaybackAudio);
+        room.on(RoomEvent.Disconnected, () => { this.state = 'disconnected'; this.cameraReady = false; this.isMicOn = false; this.isCameraOn = false; this.participants = []; });
+        room.on(RoomEvent.DataReceived, (payload, participant, kind, topic) => {
+          if (!participant || topic !== 'class-chat') return;
+          try {
+            const message = JSON.parse(new TextDecoder().decode(payload));
+            if (typeof message.text !== 'string' || !message.text.trim() || message.text.length > 2000) return;
+            this.chatMessages.push({ text: message.text, sender: participant.name || participant.identity, timestamp: new Date().toLocaleTimeString('vi-VN'), isLocal: false, status: 'received' });
+            this.scrollChatToBottom();
+          } catch { /* Discard non-chat data without granting any action. */ }
+        });
+        await room.connect(data.server_url, data.token);
+        if (this.disposed) { await room.disconnect(); return; }
+        await accepted(http.post('/chi-tiet-phong-hop/create', { id_buoi_hoc: this.sessionId, attendance_token: data.attendance_token }));
+        this.joined = true;
+        if (this.disposed) { await this.leaveAttendance(); await room.disconnect(); return; }
+        this.state = 'connected'; this.currentUserName = room.localParticipant.name || room.localParticipant.identity;
+        this.audioPlaybackBlocked = !room.canPlaybackAudio;
+        this.syncParticipants();
+        // Camera/mic errors do not claim the devices are ready.
+        try { await room.localParticipant.setCameraEnabled(true); this.isCameraOn = true; this.attachLocal(); }
+        catch (error) { this.mediaError = 'Không mở được camera. Cấp quyền camera rồi bật lại.'; }
+        try { await room.localParticipant.setMicrophoneEnabled(true); this.isMicOn = true; }
+        catch (error) { this.mediaError += ' Không mở được micro. Cấp quyền micro rồi bật lại.'; }
+        this.syncParticipants();
+      } catch (error) {
+        this.error = error.message || 'Không thể kết nối phòng học. Kiểm tra mạng và cấu hình dịch vụ video.';
+        this.state = 'failed';
+        await disposeRoom(this.room, [], this.attachments); this.room = null;
+      }
     },
-    async mounted() {
-        const currentUser = JSON.parse(
-            localStorage.getItem('thong_tin_user') ||
-            localStorage.getItem('user') ||
-            localStorage.getItem('edulink_user') ||
-            '{}'
-        );
-        this.currentUserName = currentUser?.ho_ten || currentUser?.name || currentUser?.ho_va_ten || 'Học viên';
-
-        // Lấy thông tin phòng họp từ backend API
-        try {
-            const res = await axios.get(`/api/phong-hop/ma-phong?ma_phong=${encodeURIComponent(this.roomId)}`);
-            if (res.data?.status && res.data?.data) {
-                this.tenPhongHoc = res.data.data.ten_phong;
-                this.phongHopId = res.data.data.id;
-
-                // Ghi nhận điểm danh vào chi tiết phòng họp
-                if (currentUser?.id) {
-                    await axios.post('/api/chi-tiet-phong-hop/create', {
-                        id_phong_hop: this.phongHopId,
-                        id_nguoi_dung: currentUser.id,
-                        xac_thuc_khuon_mat: 1,
-                        is_active: 1
-                    });
-                }
-            }
-        } catch (e) {
-            console.warn("Không thể tải chi tiết phòng học:", e);
-        }
-
-        // Khởi tạo danh sách người tham gia mặc định
-        this.participants = [
-            {
-                sid: 'local-user',
-                name: this.currentUserName,
-                isLocal: true,
-                audioEnabled: true,
-                videoEnabled: true
-            }
-        ];
-
-        const token = sessionStorage.getItem('livekit_token');
-        const livekitUrl = import.meta.env.VITE_LIVEKIT_URL;
-
-        // Nếu có cấu hình LiveKit đầy đủ thì kết nối LiveKit
-        if (token && livekitUrl) {
-            await this.initLiveKit(livekitUrl, token, currentUser);
-        } else {
-            // Chế độ phòng học trực tiếp qua WebRTC MediaStream cục bộ
-            await this.initLocalCameraStream();
-        }
+    attachLocal() {
+      const container = document.getElementById('local-video');
+      if (!container || !this.room) return;
+      container.replaceChildren();
+      for (const pub of this.room.localParticipant.videoTrackPublications.values()) {
+        if (!pub.track || pub.source !== this.sdk.Track.Source.Camera) continue;
+        const node = attachTrack(pub.track, container); node.muted = true; node.style.cssText = 'width:100%;height:100%;object-fit:cover;'; this.attachments.push(node);
+      }
+      this.cameraReady = this.isCameraOn;
     },
-    methods: {
-        async initLocalCameraStream() {
-            try {
-                this.localStream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
-                    audio: true
-                });
-                this.cameraReady = true;
-
-                const videoElement = document.createElement('video');
-                videoElement.srcObject = this.localStream;
-                videoElement.autoplay = true;
-                videoElement.playsInline = true;
-                videoElement.muted = true;
-                videoElement.style.width = '100%';
-                videoElement.style.height = '100%';
-                videoElement.style.objectFit = 'cover';
-                videoElement.style.transform = 'scaleX(-1)';
-
-                const localContainer = document.getElementById('local-video');
-                if (localContainer) {
-                    localContainer.innerHTML = '';
-                    localContainer.appendChild(videoElement);
-                }
-            } catch (err) {
-                console.error("Lỗi mở camera cục bộ:", err);
-                this.cameraReady = true;
-            }
-        },
-
-        async initLiveKit(livekitUrl, token, user) {
-            try {
-                this.room = markRaw(new Room({
-                    adaptiveStream: true,
-                    dynacast: true,
-                }));
-
-                // Lắng nghe người khác vào
-                this.room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
-                    if (track.kind === 'video') {
-                        if (track.source === Track.Source.ScreenShare) {
-                            this.attachRemoteVideo(track, participant, true);
-                        } else {
-                            this.attachRemoteVideo(track, participant, false);
-                        }
-                    } else if (track.kind === 'audio') {
-                        track.attach();
-                    }
-                });
-
-                this.room.on(RoomEvent.ParticipantConnected, () => {
-                    this.syncParticipants();
-                });
-
-                this.room.on(RoomEvent.ParticipantDisconnected, () => {
-                    this.syncParticipants();
-                });
-
-                this.room.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
-                    track.detach();
-                    const isScreenShare = track.source === Track.Source.ScreenShare;
-                    const videoEl = document.getElementById(isScreenShare ? `screen-${participant.sid}` : `video-${participant.sid}`);
-                    if (videoEl) videoEl.remove();
-
-                    if (isScreenShare) {
-                        const videoGrid = document.getElementById('video-grid');
-                        if (videoGrid && !videoGrid.querySelector('.screen-share-element')) {
-                            videoGrid.classList.remove('has-screen-share');
-                        }
-                        const ownerVideo = document.getElementById(`video-${participant.sid}`);
-                        if (ownerVideo) ownerVideo.classList.remove('is-sharing-person');
-                    }
-                });
-
-                // Lắng nghe tin nhắn chat từ DataChannel
-                this.room.on(RoomEvent.DataReceived, (payload, participant, kind, topic) => {
-                    const decoder = new TextDecoder();
-                    const strData = decoder.decode(payload);
-                    try {
-                        const msgData = JSON.parse(strData);
-                        this.chatMessages.push({
-                            ...msgData,
-                            isLocal: false
-                        });
-                        this.scrollToBottom();
-                    } catch (e) {
-                        console.error("Lỗi parse tin nhắn:", e);
-                    }
-                });
-
-                // HIỆU ỨNG PHÁT SÁNG KHI ĐANG NÓI
-                this.room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
-                    document.querySelectorAll('.video-wrapper, .video-container').forEach(el => el.classList.remove('speaking-border'));
-                    speakers.forEach(speaker => {
-                        const elId = speaker.isLocal ? 'local-video-wrapper' : `video-${speaker.sid}`;
-                        const el = document.getElementById(elId);
-                        if (el) el.classList.add('speaking-border');
-                    });
-                });
-
-                await this.room.connect(livekitUrl, token);
-                this.syncParticipants();
-
-                // Lưu lịch sử tham gia phòng nếu có API
-                const id_phong_that = sessionStorage.getItem('id_phong_hop');
-                const apiUrl = import.meta.env.VITE_API_URL;
-                if (user?.id && id_phong_that && apiUrl) {
-                    const data = {
-                        id_nguoi_dung: user.id,
-                        id_phong_hop: id_phong_that,
-                        xac_thuc_khuon_mat: 1,
-                        is_vi_pham: 0,
-                        is_nguoi_dung: 1,
-                        is_active: 1,
-                        trang_thai: 1
-                    };
-                    axios.post(`${apiUrl}/chi-tiet-phong-hop/create`, data).catch(() => {});
-                }
-
-                await this.room.localParticipant.enableCameraAndMicrophone();
-                this.cameraReady = true;
-
-                const localVideoTrack = this.room.localParticipant.getTrackPublication(Track.Source.Camera);
-                if (localVideoTrack && localVideoTrack.videoTrack) {
-                    const videoElement = localVideoTrack.videoTrack.attach();
-                    videoElement.style.width = '100%';
-                    videoElement.style.height = '100%';
-                    videoElement.style.objectFit = 'cover';
-                    videoElement.style.transform = 'scaleX(-1)';
-
-                    const localContainer = document.getElementById('local-video');
-                    if (localContainer) {
-                        localContainer.innerHTML = '';
-                        localContainer.appendChild(videoElement);
-                    }
-                }
-            } catch (error) {
-                console.error("Lỗi kết nối máy chủ LiveKit, chuyển sang chế độ camera cục bộ:", error);
-                await this.initLocalCameraStream();
-            }
-        },
-
-        syncParticipants() {
-            if (!this.room) return;
-
-            const localParticipant = this.room.localParticipant;
-            const remoteParticipants = Array.from(this.room.remoteParticipants.values());
-
-            this.participants = [
-                {
-                    sid: localParticipant.sid,
-                    name: localParticipant.identity || this.currentUserName || 'Bạn',
-                    isLocal: true,
-                    audioEnabled: localParticipant.isMicrophoneEnabled,
-                    videoEnabled: localParticipant.isCameraEnabled,
-                },
-                ...remoteParticipants.map(participant => ({
-                    sid: participant.sid,
-                    name: participant.identity || 'Khách',
-                    isLocal: false,
-                    audioEnabled: participant.isMicrophoneEnabled,
-                    videoEnabled: participant.isCameraEnabled,
-                }))
-            ];
-        },
-        getParticipantInitial(participant) {
-            const name = (participant.name || '').trim();
-            return name ? name.charAt(0).toUpperCase() : '?';
-        },
-        attachRemoteVideo(track, participant, isScreenShare = false) {
-            const videoGrid = document.getElementById('video-grid');
-            if (!videoGrid) return;
-
-            const wrapper = document.createElement('div');
-            wrapper.id = isScreenShare ? `screen-${participant.sid}` : `video-${participant.sid}`;
-            wrapper.className = 'video-container position-relative rounded-4 overflow-hidden shadow bg-secondary';
-
-            if (isScreenShare) {
-                wrapper.classList.add('screen-share-element');
-                videoGrid.classList.add('has-screen-share');
-                const ownerVideo = document.getElementById(`video-${participant.sid}`);
-                if (ownerVideo) ownerVideo.classList.add('is-sharing-person');
-            } else {
-                if (videoGrid.classList.contains('has-screen-share')) {
-                    const screenElement = document.getElementById(`screen-${participant.sid}`);
-                    if (screenElement) wrapper.classList.add('is-sharing-person');
-                }
-            }
-
-            const labelWrapper = document.createElement('div');
-            labelWrapper.className = 'position-absolute bottom-0 start-0 p-2 z-3 d-flex align-items-center gap-2';
-
-            const labelText = isScreenShare ? `${participant.identity} (Màn hình)` : participant.identity;
-            labelWrapper.innerHTML = `<span class="badge bg-dark px-3 py-2 rounded-pill shadow border border-secondary">${labelText}</span>`;
-
-            const videoElement = track.attach();
-            videoElement.style.width = '100%';
-            videoElement.style.height = '100%';
-            videoElement.style.objectFit = isScreenShare ? 'contain' : 'cover';
-            if (!isScreenShare) videoElement.style.transform = 'scaleX(-1)';
-
-            wrapper.appendChild(videoElement);
-            wrapper.appendChild(labelWrapper);
-            videoGrid.appendChild(wrapper);
-        },
-        async toggleMic() {
-            this.isMicOn = !this.isMicOn;
-            if (this.room?.localParticipant) {
-                await this.room.localParticipant.setMicrophoneEnabled(this.isMicOn);
-                this.syncParticipants();
-            } else if (this.localStream) {
-                this.localStream.getAudioTracks().forEach(track => {
-                    track.enabled = this.isMicOn;
-                });
-            }
-        },
-        async toggleCamera() {
-            this.isCameraOn = !this.isCameraOn;
-            if (this.room?.localParticipant) {
-                await this.room.localParticipant.setCameraEnabled(this.isCameraOn);
-                this.syncParticipants();
-            } else if (this.localStream) {
-                this.localStream.getVideoTracks().forEach(track => {
-                    track.enabled = this.isCameraOn;
-                });
-            }
-        },
-        async toggleScreenShare() {
-            try {
-                this.isSharingScreen = !this.isSharingScreen;
-                if (this.room?.localParticipant) {
-                    await this.room.localParticipant.setScreenShareEnabled(this.isSharingScreen);
-                } else if (navigator.mediaDevices.getDisplayMedia) {
-                    if (this.isSharingScreen) {
-                        const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                        const videoEl = document.querySelector('#local-video video');
-                        if (videoEl) videoEl.srcObject = displayStream;
-                        displayStream.getVideoTracks()[0].onended = () => {
-                            this.isSharingScreen = false;
-                            if (videoEl && this.localStream) videoEl.srcObject = this.localStream;
-                        };
-                    } else {
-                        const videoEl = document.querySelector('#local-video video');
-                        if (videoEl && this.localStream) videoEl.srcObject = this.localStream;
-                    }
-                }
-            } catch (error) {
-                console.error("Lỗi chia sẻ màn hình:", error);
-                this.isSharingScreen = false;
-            }
-        },
-        toggleChat() {
-            if (this.isParticipantsOpen) {
-                this.isParticipantsOpen = false;
-            }
-            this.isChatOpen = !this.isChatOpen;
-            if (this.isChatOpen) {
-                this.scrollToBottom();
-            }
-        },
-        toggleParticipants() {
-            if (this.isChatOpen) {
-                this.isChatOpen = false;
-            }
-            this.isParticipantsOpen = !this.isParticipantsOpen;
-            if (this.isParticipantsOpen) {
-                this.syncParticipants();
-            }
-        },
-        async sendChatMessage() {
-            if (!this.newMessage.trim()) return;
-            const msgData = {
-                text: this.newMessage.trim(),
-                sender: this.currentUserName,
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                isLocal: true
-            };
-
-            this.chatMessages.push(msgData);
-
-            if (this.room?.localParticipant) {
-                try {
-                    const strData = JSON.stringify(msgData);
-                    const encoder = new TextEncoder();
-                    await this.room.localParticipant.publishData(encoder.encode(strData), { reliable: true });
-                } catch (err) {
-                    console.error("Lỗi gửi tin nhắn:", err);
-                }
-            }
-
-            this.newMessage = '';
-            this.scrollToBottom();
-        },
-        scrollToBottom() {
-            this.$nextTick(() => {
-                const chatBox = this.$refs.chatBox;
-                if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
-            });
-        },
-        async openSettings() {
-            this.showSettings = true;
-            try {
-                await navigator.mediaDevices.getUserMedia({ audio: true });
-                const devices = await navigator.mediaDevices.enumerateDevices();
-
-                this.audioInputs = devices.filter(d => d.kind === 'audioinput');
-                this.audioOutputs = devices.filter(d => d.kind === 'audiooutput');
-
-                this.selectedMic = this.room?.getActiveDevice('audioinput') || this.audioInputs[0]?.deviceId || '';
-                this.selectedSpeaker = this.room?.getActiveDevice('audiooutput') || this.audioOutputs[0]?.deviceId || '';
-            } catch (err) {
-                console.error("Không thể lấy danh sách thiết bị:", err);
-            }
-        },
-        async switchDevice(kind, deviceId) {
-            if (this.room) {
-                await this.room.switchActiveDevice(kind, deviceId);
-            }
-        },
-        async roiPhong() {
-            // Ngắt kết nối phòng và dừng camera
-            if (this.room) {
-                this.room.disconnect();
-            }
-            if (this.localStream) {
-                this.localStream.getTracks().forEach(track => track.stop());
-                this.localStream = null;
-            }
-
-            const currentUser = JSON.parse(
-                localStorage.getItem('thong_tin_user') ||
-                localStorage.getItem('user') ||
-                localStorage.getItem('edulink_user') ||
-                '{}'
-            );
-            if (currentUser?.id && this.phongHopId) {
-                try {
-                    await axios.post('/api/phong-hop/roi-phong', {
-                        id_nguoi_dung: currentUser.id,
-                        id_phong_hop: this.phongHopId
-                    });
-                } catch (e) {}
-            }
-
-            sessionStorage.removeItem('livekit_token');
-            sessionStorage.removeItem('id_phong_hop');
-
-            // Quay trở lại trang lịch học
-            this.$router.push('/hoc-vien/lich-hoc');
-        }
+    attachRemote(track, participant) {
+      const container = document.getElementById(track.kind === 'audio' ? 'remote-audio' : 'video-grid');
+      if (!container) return;
+      if (track.kind === 'audio') {
+        const node = attachTrack(track, container); node.dataset.participant = participant.sid; this.attachments.push(node);
+      } else {
+        const wrapper = document.createElement('div'); wrapper.className = 'video-wrapper shadow-lg'; wrapper.dataset.participant = participant.sid;
+        const node = attachTrack(track, wrapper); node.style.cssText = 'width:100%;height:100%;object-fit:contain;';
+        const label = document.createElement('div'); label.className = 'user-label'; label.textContent = participant.name || participant.identity;
+        wrapper.appendChild(label); container.appendChild(wrapper); this.attachments.push(wrapper);
+      }
+      this.syncParticipants();
     },
-    beforeUnmount() {
-        if (this.room) {
-            this.room.disconnect();
-        }
-        if (this.localStream) {
-            this.localStream.getTracks().forEach(track => track.stop());
-            this.localStream = null;
-        }
-    }
-}
+    syncParticipants() {
+      if (!this.room || this.room.state !== 'connected') { this.participants = []; return; }
+      this.participants = [this.room.localParticipant, ...this.room.remoteParticipants.values()].map(participant => ({ sid: participant.sid, name: participant.name || participant.identity, isLocal: participant === this.room.localParticipant, audioEnabled: participant.isMicrophoneEnabled, videoEnabled: participant.isCameraEnabled }));
+    },
+    async toggleMic() {
+      if (this.state !== 'connected') return;
+      try { await this.room.localParticipant.setMicrophoneEnabled(!this.isMicOn); this.isMicOn = this.room.localParticipant.isMicrophoneEnabled; this.syncParticipants(); }
+      catch { this.mediaError = 'Không thể bật/tắt micro. Kiểm tra quyền thiết bị.'; }
+    },
+    async startAudio() {
+      try { await this.room.startAudio(); this.audioPlaybackBlocked = !this.room.canPlaybackAudio; }
+      catch { this.mediaError = 'Trình duyệt chưa cho phát âm thanh. Hãy bật quyền âm thanh của trang.'; }
+    },
+    async toggleCamera() {
+      if (this.state !== 'connected') return;
+      try { await this.room.localParticipant.setCameraEnabled(!this.isCameraOn); this.isCameraOn = this.room.localParticipant.isCameraEnabled; this.attachLocal(); this.syncParticipants(); }
+      catch { this.mediaError = 'Không thể bật/tắt camera. Kiểm tra quyền thiết bị.'; }
+    },
+    async toggleScreenShare() {
+      if (this.state !== 'connected') return;
+      try { await this.room.localParticipant.setScreenShareEnabled(!this.isSharingScreen); this.isSharingScreen = this.room.localParticipant.isScreenShareEnabled; }
+      catch { this.mediaError = 'Không thể chia sẻ màn hình hoặc bạn đã hủy lựa chọn.'; }
+    },
+    async openSettings() {
+      this.showSettings = true;
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        this.audioInputs = devices.filter(device => device.kind === 'audioinput'); this.audioOutputs = devices.filter(device => device.kind === 'audiooutput');
+      } catch { this.mediaError = 'Không thể đọc danh sách thiết bị.'; }
+    },
+    async switchDevice(kind, id) {
+      if (this.state !== 'connected') return;
+      try { await this.room.switchActiveDevice(kind, id); }
+      catch { this.mediaError = 'Trình duyệt hoặc thiết bị không hỗ trợ lựa chọn này.'; }
+    },
+    toggleChat() { this.isChatOpen = !this.isChatOpen; this.isParticipantsOpen = false; this.scrollChatToBottom(); },
+    toggleParticipants() { this.isParticipantsOpen = !this.isParticipantsOpen; this.isChatOpen = false; },
+    getParticipantInitial(participant) { return (participant.name || '?').slice(0,1).toUpperCase(); },
+    scrollChatToBottom() { this.$nextTick(() => { if (this.$refs.chatBox) this.$refs.chatBox.scrollTop = this.$refs.chatBox.scrollHeight; }); },
+    async sendChatMessage() {
+      if (this.sending) return;
+      this.sending = true; this.error = '';
+      try {
+        const sent = await sendRoomMessage(this.room, this.newMessage);
+        this.chatMessages.push({ ...sent, sender: this.currentUserName, timestamp: new Date().toLocaleTimeString('vi-VN') }); this.newMessage = ''; this.scrollChatToBottom();
+      } catch (error) { this.error = error.message || 'Tin nhắn chưa được gửi. Vui lòng thử lại.'; }
+      finally { this.sending = false; }
+    },
+    async cleanup() {
+      this.disposed = true;
+      await disposeRoom(this.room, [], this.attachments); this.room = null; this.attachments = [];
+      await this.leaveAttendance();
+    },
+    async leaveAttendance() {
+      if (!this.joined || this.leaving) return;
+      this.leaving = true;
+      try { await accepted(http.post('/phong-hop/roi-phong', { id_buoi_hoc: this.sessionId })); this.joined = false; }
+      catch (error) { this.error = error.message || 'Đã ngắt video nhưng chưa ghi nhận rời phòng. Vui lòng thử lại.'; }
+      finally { this.leaving = false; }
+    },
+    async roiPhong() { await this.cleanup(); if (this.joined) return; this.$router.push(localStorage.getItem('role') === 'giao_vien' ? '/giao-vien/lich-day' : '/hoc-vien/lich-hoc'); }
+  }
+};
+
 </script>
 
 <style scoped>
@@ -663,7 +391,7 @@ export default {
     position: relative;
 }
 
-.video-wrapper,
+:deep(.video-wrapper),
 :deep(.video-container) {
     position: relative;
     width: 100%;
@@ -683,7 +411,7 @@ export default {
     transform: scale(1.02);
 }
 
-.user-label {
+:deep(.user-label) {
     position: absolute;
     bottom: 12px;
     left: 12px;

@@ -2,16 +2,21 @@
 
 namespace App\Models;
 
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class HocVien extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $table = 'hoc_viens';
+
+    public function setEmailAttribute(string $value): void
+    {
+        $this->attributes['email'] = mb_strtolower(trim($value));
+    }
 
     protected $fillable = [
         'ho_ten',
@@ -29,10 +34,18 @@ class HocVien extends Authenticatable
     ];
 
     protected $hidden = [
+        'du_lieu_khuon_mat',
         'face_id_photo_path',
         'password',
         'remember_token',
     ];
+
+    protected $appends = ['has_face_id'];
+
+    public function getHasFaceIdAttribute(): bool
+    {
+        return ! empty($this->attributes['du_lieu_khuon_mat']);
+    }
 
     protected function casts(): array
     {

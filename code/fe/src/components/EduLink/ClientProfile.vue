@@ -25,7 +25,7 @@
             <span
               v-if="da_xac_minh_face_id"
               class="avatar-verified-shield"
-              title="Đã xác thực Face ID sinh trắc học"
+              title="Đã đăng ký mẫu Face ID"
             >
               <i class="bx bxs-check-shield"></i>
             </span>
@@ -91,6 +91,14 @@
       </div>
 
       <!-- Toast thông báo kết quả -->
+      <p v-if="profileError" class="alert alert-danger" role="alert">{{ profileError }}</p>
+      <div class="d-flex flex-wrap gap-2 mb-3">
+        <router-link class="btn btn-outline-primary" :to="userRole === 'giao_vien' ? '/giao-vien/lich-day' : '/hoc-vien/lich-hoc'">Lịch buổi học</router-link>
+        <router-link class="btn btn-outline-primary" to="/my-classes">Lớp học</router-link>
+        <router-link class="btn btn-outline-primary" to="/hoc-thu-cua-toi">Yêu cầu học thử</router-link>
+        <router-link class="btn btn-outline-primary" to="/danh-gia">Đánh giá</router-link>
+        <router-link v-if="userRole === 'hoc_vien'" class="btn btn-outline-primary" to="/thanh-toan">Học phí</router-link>
+      </div>
       <transition name="toast-fade">
         <div v-if="toast.show" :class="['profile-toast', 'toast-' + toast.type]">
           <i :class="toast.icon" class="me-2 fs-5"></i>
@@ -108,6 +116,11 @@
           </div>
 
           <form @submit.prevent="submitUpdateProfile" class="profile-form">
+            <div v-if="userRole === 'giao_vien'" class="row g-3 mb-3">
+              <label class="col-md-6">Chức danh<input v-model.trim="profileForm.chuc_danh" class="form-control" maxlength="150" /></label>
+              <label class="col-md-6">Số năm kinh nghiệm<input v-model.number="profileForm.so_nam_kinh_nghiem" type="number" min="0" max="80" class="form-control" /></label>
+              <label class="col-12">Giới thiệu chuyên môn<textarea v-model.trim="profileForm.mo_ta" class="form-control" rows="3" maxlength="5000"></textarea></label>
+            </div>
             <div class="row g-3">
               <div class="col-md-6">
                 <label class="form-label fw-semibold">Họ và tên <span class="text-danger">*</span></label>
@@ -265,7 +278,7 @@
           <div class="section-header">
             <h2 class="section-title"><i class="fa-solid fa-fingerprint text-primary me-2"></i> Xác thực Face ID sinh trắc học</h2>
             <p class="section-subtitle">
-              Đăng ký khuôn mặt giúp bạn điểm danh lớp học tự động, xác minh bảo mật và đăng nhập nhanh không cần mật khẩu.
+              Đăng ký mẫu khuôn mặt để xác thực trước khi đăng ký lớp hoặc vào phòng học.
             </p>
           </div>
 
@@ -278,91 +291,13 @@
                   {{ da_xac_minh_face_id ? 'Tài khoản của bạn đã được kích hoạt Face ID' : 'Chưa đăng ký Face ID cho tài khoản này' }}
                 </h5>
                 <p class="mb-0 small">
-                  {{ da_xac_minh_face_id ? 'Dữ liệu vector khuôn mặt của bạn đã được mã hóa an toàn trên hệ thống. Bạn có thể quét lại để cập nhật góc nhìn mới bất cứ lúc nào.' : 'Vui lòng sử dụng camera bên dưới để quét khuôn mặt trực tiếp hoặc tải ảnh chân dung rõ mặt để đăng ký.' }}
+                  {{ da_xac_minh_face_id ? 'Máy chủ đã lưu mẫu khuôn mặt. Có thể quét lại để cập nhật mẫu.' : 'Vui lòng sử dụng camera bên dưới để đăng ký mẫu khuôn mặt.' }}
                 </p>
               </div>
             </div>
           </div>
 
-          <!-- Giao diện Camera quét Face ID trực tiếp -->
-          <div class="face-scanner-container text-center py-3">
-            <div class="scanner-wrapper mx-auto">
-              <!-- Video Live Stream -->
-              <video
-                ref="videoElement"
-                autoplay
-                playsinline
-                muted
-                class="scanner-video"
-                :class="{ 'scanning-active': isScanning }"
-              ></video>
-              <!-- Canvas vẽ khung nhận diện -->
-              <canvas ref="overlayCanvas" class="scanner-canvas"></canvas>
-
-              <!-- Vòng radar quét xoay quanh -->
-              <div v-if="isScanning" class="radar-scan-circle"></div>
-
-              <!-- Lớp mờ khi chưa mở camera -->
-              <div v-if="!isScanning" class="camera-standby-overlay">
-                <i class="fa-solid fa-camera fs-1 mb-2 text-muted"></i>
-                <p class="small text-muted mb-0">Camera đang tắt</p>
-              </div>
-            </div>
-
-            <!-- Trạng thái quét động -->
-            <div class="scan-status-info mt-3">
-              <div v-if="isModelLoading" class="text-primary fw-medium">
-                <i class="fa-solid fa-spinner fa-spin me-2"></i> Đang tải mô hình trí tuệ nhân tạo (AI Face Detection)...
-              </div>
-              <div v-else-if="scanStatus" class="fw-bold text-dark fs-6">
-                {{ scanStatus }}
-              </div>
-              <div v-else class="text-muted small">
-                Nhìn thẳng vào khung hình tròn, giữ yên khuôn mặt trong vài giây khi mở camera.
-              </div>
-
-              <!-- Thanh tiến trình quét (0 - 100%) -->
-              <div v-if="isScanning && scanProgress > 0" class="progress scan-progress-bar mx-auto mt-2" style="max-width: 280px; height: 8px;">
-                <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" :style="{ width: scanProgress + '%' }"></div>
-              </div>
-            </div>
-
-            <!-- Các nút thao tác Camera -->
-            <div class="scanner-actions mt-3 d-flex justify-content-center gap-2">
-              <button
-                v-if="!isScanning"
-                type="button"
-                class="btn btn-primary px-4 py-2 fw-semibold"
-                @click="startFaceScan"
-              >
-                <i class="fa-solid fa-camera me-2"></i> {{ da_xac_minh_face_id ? 'Quét lại Face ID' : 'Bắt đầu quét Face ID' }}
-              </button>
-              <button
-                v-else
-                type="button"
-                class="btn btn-outline-danger px-4 py-2 fw-semibold"
-                @click="stopFaceScan"
-              >
-                <i class="fa-solid fa-stop me-2"></i> Dừng Camera
-              </button>
-            </div>
-
-            <!-- Tùy chọn dự phòng: Tải ảnh Face ID -->
-            <div class="mt-4 pt-3 border-top" style="max-width: 480px; margin: 0 auto;">
-              <p class="small text-muted mb-2">
-                <i class="fa-solid fa-circle-info me-1"></i> Thiết bị không có webcam? Bạn có thể tải lên ảnh chân dung rõ mặt để lưu hồ sơ:
-              </p>
-              <div class="input-group input-group-sm">
-                <input
-                  type="file"
-                  class="form-control"
-                  accept="image/jpeg,image/png,image/webp"
-                  @change="handleFacePhotoUpload"
-                  :disabled="loading.facePhoto"
-                />
-              </div>
-            </div>
-          </div>
+          <FaceProof purpose="sample" @verified="onFaceSampleSaved" @cancel="activeTab = 'info'" />
         </div>
 
         <!-- ================= TAB 4: ĐỔI MẬT KHẨU ================= -->
@@ -475,18 +410,24 @@
       </div>
     </div>
   </div>
+<FinanceSummary class="container mb-3" />
+<TeacherBank v-if="userRole === 'giao_vien'" class="container mb-4" />
 </template>
 
 <script>
-import * as faceapi from "face-api.js";
+import FaceProof from "./FaceProof.vue";
+import TeacherBank from "./TeacherBank.vue";
+import FinanceSummary from "./FinanceSummary.vue";
 import profileService from "../../services/profileService";
 
 export default {
   name: "ClientProfile",
+  components: { FaceProof, TeacherBank, FinanceSummary },
   data() {
     return {
       activeTab: "info", // 'info' | 'avatar' | 'faceid' | 'password'
       userRole: "hoc_vien",
+      profileError: '',
       defaultAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80",
       profile: {
         id: null,
@@ -497,15 +438,16 @@ export default {
         gioi_tinh: 1,
         dia_chi: "",
         hinh_anh: "",
-        du_lieu_khuon_mat: null,
-        face_id_photo_path: null
+        has_face_id: false,
+        face_id_photo_path: null,
+        chuc_danh: '', so_nam_kinh_nghiem: 0, mo_ta: '',
       },
       profileForm: {
         ho_ten: "",
         so_dien_thoai: "",
         ngay_sinh: "",
         gioi_tinh: 1,
-        dia_chi: ""
+        dia_chi: "", chuc_danh: '', so_nam_kinh_nghiem: 0, mo_ta: '',
       },
       // Avatar
       avatarPreview: "",
@@ -553,7 +495,7 @@ export default {
   },
   computed: {
     da_xac_minh_face_id() {
-      return !!(this.profile.du_lieu_khuon_mat || this.profile.face_id_photo_path);
+      return this.profile.has_face_id === true;
     }
   },
   mounted() {
@@ -574,6 +516,7 @@ export default {
   methods: {
     // 1. TẢI HỒ SƠ TÀI KHOẢN
     async loadProfile() {
+      this.profileError = '';
       // Đọc trước từ LocalStorage
       const localUserStr = localStorage.getItem("user") || localStorage.getItem("edulink_user");
       if (localUserStr) {
@@ -587,13 +530,14 @@ export default {
       try {
         const res = await profileService.getProfile(this.userRole);
         if (res && (res.status || res.data)) {
-          const userData = res.data || res;
+          const userData = { ...(res.data || res) };
+          delete userData.du_lieu_khuon_mat;
           this.applyUserData(userData);
           // Cập nhật lại localStorage để đồng bộ các nơi khác
           localStorage.setItem("user", JSON.stringify(userData));
         }
       } catch (err) {
-        console.warn("Không thể tải hồ sơ từ server:", err);
+        this.profileError = err.message || 'Không thể tải hồ sơ từ máy chủ.';
       }
     },
 
@@ -609,8 +553,9 @@ export default {
         gioi_tinh: u.gioi_tinh !== undefined ? u.gioi_tinh : 1,
         dia_chi: u.dia_chi || "",
         hinh_anh: u.hinh_anh || u.avatar || "",
-        du_lieu_khuon_mat: u.du_lieu_khuon_mat || null,
-        face_id_photo_path: u.face_id_photo_path || null
+        has_face_id: u.has_face_id === true,
+        face_id_photo_path: u.face_id_photo_path || null,
+        chuc_danh: u.chuc_danh || '', so_nam_kinh_nghiem: u.so_nam_kinh_nghiem || 0, mo_ta: u.mo_ta || '',
       };
 
       this.profileForm = {
@@ -618,7 +563,8 @@ export default {
         so_dien_thoai: this.profile.so_dien_thoai,
         ngay_sinh: this.profile.ngay_sinh ? this.profile.ngay_sinh.substring(0, 10) : "",
         gioi_tinh: this.profile.gioi_tinh,
-        dia_chi: this.profile.dia_chi
+        dia_chi: this.profile.dia_chi,
+        chuc_danh: this.profile.chuc_danh, so_nam_kinh_nghiem: this.profile.so_nam_kinh_nghiem, mo_ta: this.profile.mo_ta,
       };
 
       if (!this.avatarPreview) {
@@ -638,6 +584,7 @@ export default {
           dia_chi: this.profileForm.dia_chi || null,
           hinh_anh: this.profile.hinh_anh
         };
+        if (this.userRole === 'giao_vien') Object.assign(payload, { chuc_danh: this.profileForm.chuc_danh, so_nam_kinh_nghiem: this.profileForm.so_nam_kinh_nghiem, mo_ta: this.profileForm.mo_ta });
 
         const res = await profileService.updateProfile(this.userRole, payload);
         if (res && res.status) {
@@ -711,155 +658,12 @@ export default {
       }
     },
 
-    // 4. XÁC THỰC FACE ID CAMERA
-    async startFaceScan() {
-      this.isScanning = true;
-      this.scanStatus = "Đang kết nối camera...";
-      this.scanProgress = 0;
-      this.scanCount = 0;
-
-      try {
-        // Tải Face-API model nếu chưa tải
-        if (!this.isModelLoaded) {
-          this.isModelLoading = true;
-          this.scanStatus = "Đang tải mô hình trí tuệ nhân tạo...";
-          await Promise.all([
-            faceapi.nets.tinyFaceDetector.loadFromUri("/model"),
-            faceapi.nets.faceLandmark68Net.loadFromUri("/model"),
-            faceapi.nets.faceRecognitionNet.loadFromUri("/model")
-          ]);
-          this.isModelLoaded = true;
-          this.isModelLoading = false;
-        }
-
-        // Mở luồng Camera
-        this.videoStream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 320, height: 320, facingMode: "user" }
-        });
-
-        const video = this.$refs.videoElement;
-        if (video) {
-          video.srcObject = this.videoStream;
-          video.onloadedmetadata = () => {
-            video.play();
-            this.runFaceDetectionLoop();
-          };
-        }
-      } catch (err) {
-        console.error("Lỗi camera:", err);
-        this.isScanning = false;
-        this.isModelLoading = false;
-        const msg = err.name === "NotAllowedError"
-          ? "Trình duyệt đã chặn quyền truy cập Camera. Vui lòng cho phép quyền Camera trên thanh địa chỉ."
-          : "Không thể kết nối với Camera: " + (err.message || err.name);
-        this.showToast("error", msg);
-      }
+    onFaceSampleSaved() {
+      this.profile.has_face_id = true;
+      this.syncLocalUser();
+      this.showToast('success', 'Máy chủ đã lưu mẫu Face ID.');
     },
-
-    runFaceDetectionLoop() {
-      const video = this.$refs.videoElement;
-      const canvas = this.$refs.overlayCanvas;
-      if (!video || !canvas) return;
-
-      const displaySize = { width: 220, height: 220 };
-      canvas.width = displaySize.width;
-      canvas.height = displaySize.height;
-      faceapi.matchDimensions(canvas, displaySize);
-
-      this.scanStatus = "Đang tìm kiếm khuôn mặt...";
-
-      this.detectInterval = setInterval(async () => {
-        if (!this.isScanning || !video || video.paused || video.ended) return;
-
-        try {
-          const detections = await faceapi
-            .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 }))
-            .withFaceLandmarks()
-            .withFaceDescriptors();
-
-          const ctx = canvas.getContext("2d");
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-          if (detections.length === 1) {
-            this.scanCount++;
-            this.scanProgress = Math.min(Math.round((this.scanCount / this.requiredScanFrames) * 100), 100);
-            this.scanStatus = `Đang phân tích đặc trưng sinh trắc học... ${this.scanProgress}%`;
-
-            if (this.scanCount >= this.requiredScanFrames) {
-              clearInterval(this.detectInterval);
-              this.scanStatus = "Đang lưu dữ liệu Face ID vào hệ thống...";
-              const descriptorVector = Array.from(detections[0].descriptor);
-              await this.saveFaceIdDescriptor(descriptorVector);
-            }
-          } else if (detections.length === 0) {
-            this.scanCount = Math.max(0, this.scanCount - 1);
-            this.scanStatus = "Vui lòng nhìn thẳng vào camera...";
-          } else {
-            this.scanStatus = "Cảnh báo: Phát hiện quá nhiều người trong khung hình!";
-          }
-        } catch (e) {
-          console.error("Lỗi nhận diện khuôn mặt:", e);
-        }
-      }, 200);
-    },
-
-    async saveFaceIdDescriptor(descriptorVector) {
-      try {
-        const res = await profileService.saveFaceIdVector(this.userRole, this.profile.id, descriptorVector);
-        if (res && (res.status || res.success)) {
-          this.profile.du_lieu_khuon_mat = JSON.stringify(descriptorVector);
-          this.syncLocalUser();
-          this.showToast("success", "Đăng ký Face ID thành công! Dữ liệu sinh trắc học đã được kích hoạt.");
-          this.stopFaceScan();
-        } else {
-          this.showToast("error", res?.message || "Lỗi lưu sinh trắc học.");
-          this.stopFaceScan();
-        }
-      } catch (err) {
-        console.error(err);
-        this.showToast("error", err?.response?.data?.message || "Lỗi khi lưu khuôn mặt.");
-        this.stopFaceScan();
-      }
-    },
-
-    stopFaceScan() {
-      if (this.detectInterval) {
-        clearInterval(this.detectInterval);
-        this.detectInterval = null;
-      }
-      if (this.videoStream) {
-        this.videoStream.getTracks().forEach((track) => track.stop());
-        this.videoStream = null;
-      }
-      this.isScanning = false;
-      this.scanStatus = "";
-      this.scanProgress = 0;
-    },
-
-    async handleFacePhotoUpload(e) {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      this.loading.facePhoto = true;
-      try {
-        const formData = new FormData();
-        formData.append("face_id_photo", file);
-
-        const res = await profileService.uploadFaceIdPhoto(this.userRole, formData);
-        if (res && res.status) {
-          this.profile.face_id_photo_path = "uploaded";
-          this.syncLocalUser();
-          this.showToast("success", "Tải lên ảnh Face ID thành công!");
-        } else {
-          this.showToast("error", res?.message || "Không thể tải ảnh Face ID.");
-        }
-      } catch (err) {
-        console.error(err);
-        this.showToast("error", err?.response?.data?.message || "Lỗi khi tải ảnh Face ID.");
-      } finally {
-        this.loading.facePhoto = false;
-      }
-    },
+    stopFaceScan() {},
 
     // 5. ĐỔI MẬT KHẨU
     checkPasswordStrength() {
@@ -930,6 +734,7 @@ export default {
         avatar: avatarFinal,
         hinh_anh: avatarFinal
       };
+      delete u.du_lieu_khuon_mat;
       localStorage.setItem("user", JSON.stringify(u));
       localStorage.setItem("edulink_user", JSON.stringify(u));
       window.dispatchEvent(new CustomEvent("edulink:user-updated", { detail: u }));

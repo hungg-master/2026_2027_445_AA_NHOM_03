@@ -24,23 +24,31 @@ class TaoLopHocRequest extends FormRequest
         return [
             'id_mon_hoc' => 'required|exists:mon_hocs,id',
             'id_phong_hoc' => [
-                Rule::requiredIf(!$isOnline),
+                Rule::requiredIf(! $isOnline),
                 'nullable',
                 'exists:phong_hocs,id',
             ],
             'loai_lop' => 'required|in:dai_tra,kem',
             'hinh_thuc' => 'required|in:online,offline',
             'link_online' => [
-                Rule::requiredIf($isOnline),
+                'bail',
                 'nullable',
-                'url',
+                'string',
+                function ($attribute, $value, $fail) {
+                    if (! filter_var($value, FILTER_VALIDATE_URL)
+                        && ! preg_match('~^/phong-hoc/ST-[a-f0-9-]{36}$~i', $value)) {
+                        $fail('Link online không đúng định dạng URL.');
+                    }
+                },
                 'max:500',
             ],
             'hoc_phi' => 'required|numeric|min:0|max:999999999.99',
             'si_so_toi_da' => "required|integer|min:1|max:$maxSiSo",
-            'thoi_gian_bat_dau' => 'required|date|after:now',
+            'thoi_gian_bat_dau' => $this->isMethod('POST') ? 'required|date|after:now' : 'required|date',
             'thoi_gian_ket_thuc' => 'required|date|after:thoi_gian_bat_dau',
-            'tinh_trang' => 'nullable|in:sap_mo,dang_mo,dang_hoc,da_ket_thuc,da_huy',
+            'tinh_trang' => $this->isMethod('POST') ? 'nullable|in:sap_mo,dang_mo' : 'nullable|in:sap_mo,dang_mo,dang_hoc,da_ket_thuc,da_huy',
+            'recurrence' => 'nullable|in:once,weekly',
+            'recurrence_until' => 'required_if:recurrence,weekly|nullable|date_format:Y-m-d',
         ];
     }
 

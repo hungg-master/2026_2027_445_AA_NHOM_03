@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\HocVien\ChangePasswordHocVienRequest;
 use App\Http\Requests\HocVien\DangKyHocVienRequest;
 use App\Http\Requests\HocVien\DangNhapHocVienRequest;
 use App\Http\Requests\HocVien\UpdateProfileHocVienRequest;
-use App\Http\Requests\HocVien\ChangePasswordHocVienRequest;
 use App\Models\HocVien;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,23 +20,25 @@ class HocVienController extends Controller
     public function register(DangKyHocVienRequest $request)
     {
         try {
-            $data = $request->all();
-            $data['password']   = Hash::make($request->password);
+            $data = $request->validated();
+            $data['password'] = Hash::make($request->password);
             $data['tinh_trang'] = 1;
-            $data['is_active']  = 1;
-            $data['is_block']   = 0;
+            $data['is_active'] = 1;
+            $data['is_block'] = 0;
 
             $hocVien = HocVien::create($data);
 
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'Đăng ký tài khoản học viên thành công! Bạn có thể đăng nhập ngay bây giờ.',
-                'data'    => $hocVien,
+                'data' => $hocVien,
             ]);
         } catch (\Exception $e) {
+            report($e);
+
             return response()->json([
-                'status'  => false,
-                'message' => 'Đã có lỗi xảy ra: ' . $e->getMessage(),
+                'status' => false,
+                'message' => 'Không thể xử lý yêu cầu lúc này. Vui lòng thử lại.',
             ], 500);
         }
     }
@@ -45,16 +47,16 @@ class HocVienController extends Controller
     {
         try {
             $check = Auth::guard('hoc_vien')->attempt([
-                'email'    => $request->email,
+                'email' => $request->email,
                 'password' => $request->password,
             ]);
 
             if ($check) {
                 $hocVien = Auth::guard('hoc_vien')->user();
 
-                if ($hocVien->is_block == 1) {
+                if ($hocVien->is_block == 1 || $hocVien->tinh_trang != 1 || ! $hocVien->is_active) {
                     return response()->json([
-                        'status'  => false,
+                        'status' => false,
                         'message' => 'Tài khoản học viên của bạn đã bị khóa!',
                     ], 403);
                 }
@@ -62,21 +64,23 @@ class HocVienController extends Controller
                 $token = $hocVien->createToken('token_hoc_vien')->plainTextToken;
 
                 return response()->json([
-                    'status'  => true,
+                    'status' => true,
                     'message' => 'Đăng nhập thành công',
-                    'token'   => $token,
-                    'user'    => $hocVien,
+                    'token' => $token,
+                    'user' => $hocVien,
                 ]);
             }
 
             return response()->json([
-                'status'  => false,
+                'status' => false,
                 'message' => 'Tài khoản hoặc mật khẩu không chính xác',
             ], 401);
         } catch (\Exception $e) {
+            report($e);
+
             return response()->json([
-                'status'  => false,
-                'message' => 'Đã có lỗi xảy ra: ' . $e->getMessage(),
+                'status' => false,
+                'message' => 'Không thể xử lý yêu cầu lúc này. Vui lòng thử lại.',
             ], 500);
         }
     }
@@ -89,7 +93,7 @@ class HocVienController extends Controller
         }
 
         return response()->json([
-            'status'  => true,
+            'status' => true,
             'message' => 'Đăng xuất thành công',
         ]);
     }
@@ -100,12 +104,12 @@ class HocVienController extends Controller
         if ($user && $user instanceof HocVien) {
             return response()->json([
                 'status' => true,
-                'user'   => $user,
+                'user' => $user,
             ]);
         }
 
         return response()->json([
-            'status'  => false,
+            'status' => false,
             'message' => 'Token không hợp lệ hoặc đã hết hạn!',
         ], 401);
     }
@@ -113,9 +117,10 @@ class HocVienController extends Controller
     public function getProfile()
     {
         $user = Auth::guard('sanctum')->user();
+
         return response()->json([
             'status' => true,
-            'data'   => $user,
+            'data' => $user,
         ]);
     }
 
@@ -133,14 +138,16 @@ class HocVienController extends Controller
             ]));
 
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'Cập nhật thông tin học viên thành công!',
-                'data'    => $user,
+                'data' => $user,
             ]);
         } catch (\Exception $e) {
+            report($e);
+
             return response()->json([
-                'status'  => false,
-                'message' => 'Cập nhật thất bại: ' . $e->getMessage(),
+                'status' => false,
+                'message' => 'Không thể xử lý yêu cầu lúc này. Vui lòng thử lại.',
             ], 500);
         }
     }
@@ -150,9 +157,9 @@ class HocVienController extends Controller
         try {
             $user = Auth::guard('sanctum')->user();
 
-            if (!Hash::check($request->current_password, $user->password)) {
+            if (! Hash::check($request->current_password, $user->password)) {
                 return response()->json([
-                    'status'  => false,
+                    'status' => false,
                     'message' => 'Mật khẩu hiện tại không chính xác!',
                 ], 400);
             }
@@ -161,13 +168,15 @@ class HocVienController extends Controller
             $user->save();
 
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'Đổi mật khẩu thành công!',
             ]);
         } catch (\Exception $e) {
+            report($e);
+
             return response()->json([
-                'status'  => false,
-                'message' => 'Đổi mật khẩu thất bại: ' . $e->getMessage(),
+                'status' => false,
+                'message' => 'Không thể xử lý yêu cầu lúc này. Vui lòng thử lại.',
             ], 500);
         }
     }
@@ -179,9 +188,10 @@ class HocVienController extends Controller
     public function getDataAdmin()
     {
         $data = HocVien::orderBy('id', 'desc')->get();
+
         return response()->json([
             'status' => true,
-            'data'   => $data,
+            'data' => $data,
         ]);
     }
 
@@ -193,13 +203,13 @@ class HocVienController extends Controller
             $hocVien->save();
 
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'Cập nhật trạng thái học viên thành công!',
             ]);
         }
 
         return response()->json([
-            'status'  => false,
+            'status' => false,
             'message' => 'Không tìm thấy học viên!',
         ], 404);
     }
@@ -207,90 +217,15 @@ class HocVienController extends Controller
     public function search(Request $request)
     {
         $timKiem = trim($request->noi_dung_tim);
-        $data    = HocVien::where('ho_ten', 'like', '%' . $timKiem . '%')
-            ->orWhere('email', 'like', '%' . $timKiem . '%')
-            ->orWhere('so_dien_thoai', 'like', '%' . $timKiem . '%')
+        $data = HocVien::where('ho_ten', 'like', '%'.$timKiem.'%')
+            ->orWhere('email', 'like', '%'.$timKiem.'%')
+            ->orWhere('so_dien_thoai', 'like', '%'.$timKiem.'%')
             ->orderBy('id', 'desc')
             ->get();
 
         return response()->json([
             'status' => true,
-            'data'   => $data,
+            'data' => $data,
         ]);
-    }
-
-    public function xacThucKhuonMat(Request $request)
-    {
-        $request->validate([
-            'du_lieu_khuon_mat' => 'required'
-        ]);
-
-        $user = Auth::guard('sanctum')->user();
-        if (!$user && $request->id) {
-            $user = HocVien::find($request->id);
-        }
-
-        if (!$user) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'Người dùng không tồn tại hoặc chưa đăng nhập!'
-            ], 401);
-        }
-
-        $vector_moi = is_string($request->du_lieu_khuon_mat)
-            ? json_decode($request->du_lieu_khuon_mat, true)
-            : $request->du_lieu_khuon_mat;
-
-        if (!is_array($vector_moi)) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'Lỗi định dạng dữ liệu sinh trắc học.'
-            ], 400);
-        }
-
-        // Kiểm tra trùng lặp với học viên khác
-        $danh_sach_khac = HocVien::whereNotNull('du_lieu_khuon_mat')
-            ->where('id', '!=', $user->id)
-            ->get();
-
-        foreach ($danh_sach_khac as $user_khac) {
-            $vector_cu = is_string($user_khac->du_lieu_khuon_mat)
-                ? json_decode($user_khac->du_lieu_khuon_mat, true)
-                : $user_khac->du_lieu_khuon_mat;
-
-            $khoang_cach = $this->tinhToanDistance($vector_moi, $vector_cu);
-
-            if ($khoang_cach < 0.50) {
-                return response()->json([
-                    'status'  => false,
-                    'message' => 'Lỗi bảo mật! Sinh trắc học này đã được liên kết với một tài khoản khác trong hệ thống.'
-                ], 400);
-            }
-        }
-
-        $user->du_lieu_khuon_mat = is_array($request->du_lieu_khuon_mat)
-            ? json_encode($request->du_lieu_khuon_mat)
-            : $request->du_lieu_khuon_mat;
-        $user->save();
-
-        return response()->json([
-            'status'  => true,
-            'message' => 'Xác thực và lưu Face ID thành công!',
-            'data'    => $user
-        ]);
-    }
-
-    private function tinhToanDistance($vectorA, $vectorB)
-    {
-        if (!is_array($vectorA) || !is_array($vectorB) || count($vectorA) === 0 || count($vectorA) !== count($vectorB)) {
-            return 1.0;
-        }
-
-        $sum = 0;
-        for ($i = 0; $i < count($vectorA); $i++) {
-            $sum += pow((float)$vectorA[$i] - (float)$vectorB[$i], 2);
-        }
-
-        return sqrt($sum);
     }
 }

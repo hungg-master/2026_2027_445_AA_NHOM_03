@@ -142,13 +142,15 @@
               <small class="hint">Lớp kèm tối đa 5, đại trà tối đa 30</small>
             </div>
             <div class="form-field">
-              <label>Bắt đầu <span class="required">*</span></label>
+              <label>Bắt đầu buổi đầu tiên <span class="required">*</span></label>
               <input type="datetime-local" class="form-input" v-model="form.thoi_gian_bat_dau" required />
             </div>
             <div class="form-field">
-              <label>Kết thúc <span class="required">*</span></label>
+              <label>Kết thúc buổi đầu tiên <span class="required">*</span></label>
               <input type="datetime-local" class="form-input" v-model="form.thoi_gian_ket_thuc" required />
             </div>
+            <div class="form-field"><label>Lặp lịch</label><select v-model="form.recurrence" class="form-input"><option value="once">Một buổi</option><option value="weekly">Hằng tuần</option></select></div>
+            <div v-if="form.recurrence === 'weekly'" class="form-field"><label>Ngày kết thúc lặp</label><input type="date" v-model="form.recurrence_until" class="form-input" required /></div>
             <div class="form-field" style="grid-column: span 2;">
               <label>Trạng thái</label>
               <select class="form-input" v-model="form.tinh_trang">
@@ -253,6 +255,7 @@ export default {
   methods: {
     emptyForm() {
       return {
+        recurrence: 'once', recurrence_until: '',
         id: null,
         id_mon_hoc: '',
         id_phong_hoc: '',
@@ -317,6 +320,7 @@ export default {
     openEditModal(lop) {
       this.form = {
         ...lop,
+        recurrence: lop.recurrence || 'once', recurrence_until: lop.recurrence_until || '',
         thoi_gian_bat_dau: this.toDateTimeLocal(new Date(lop.thoi_gian_bat_dau)),
         thoi_gian_ket_thuc: this.toDateTimeLocal(new Date(lop.thoi_gian_ket_thuc)),
       }
@@ -338,8 +342,8 @@ export default {
       try {
         const payload = {
           ...this.form,
-          thoi_gian_bat_dau: new Date(this.form.thoi_gian_bat_dau).toISOString(),
-          thoi_gian_ket_thuc: new Date(this.form.thoi_gian_ket_thuc).toISOString(),
+          thoi_gian_bat_dau: `${this.form.thoi_gian_bat_dau}:00+07:00`,
+          thoi_gian_ket_thuc: `${this.form.thoi_gian_ket_thuc}:00+07:00`,
         }
         let res
         if (this.form.id) {

@@ -27,6 +27,7 @@
           </div>
         </div>
 
+        <p v-if="scheduleError" class="alert alert-danger" role="alert">{{ scheduleError }} <button class="btn btn-outline-danger btn-sm" @click="loadSavedSchedule">Tải lại</button></p>
         <!-- Thông báo Toast -->
         <transition name="toast-fade">
           <div v-if="toast.show" :class="['schedule-toast', 'toast-' + toast.type]">
@@ -183,7 +184,7 @@
           </section>
 
           <!-- Cột phải: Danh sách gia sư / giảng viên gợi ý -->
-          <aside class="tutors-column">
+          <aside v-if="roleIsStudent" class="tutors-column">
             <!-- Header gợi ý & badge đếm số match -->
             <div class="tutors-header">
               <div class="d-flex align-items-center justify-content-between">
@@ -193,6 +194,15 @@
               <p class="tutors-subtitle">Phù hợp với khung giờ bạn đã chọn</p>
             </div>
 
+            <form @submit.prevent="findTutors" class="card p-3 mb-3 d-grid gap-2">
+              <label>Môn học<select v-model="matchSubject" class="form-select" required><option value="">Chọn môn</option><option v-for="subject in subjects" :key="subject.id" :value="subject.id">{{ subject.ten_mon_hoc }}</option></select></label>
+              <label>Ngày học thử<input v-model="matchDate" type="date" class="form-control" required /></label>
+              <label>Thời lượng (phút)<input v-model.number="matchDuration" type="number" min="15" max="180" step="15" class="form-control" required /></label>
+              <button class="btn btn-primary" :disabled="matching || hasUnsavedChanges">{{ matching ? 'Đang tìm…' : 'Tìm giảng viên' }}</button>
+              <small v-if="hasUnsavedChanges">Lưu lịch rảnh trước khi tìm giảng viên.</small>
+              <p v-if="matchError" class="text-danger" role="alert">{{ matchError }}</p>
+              <p v-if="!matching && !tutors.length">Chưa có giảng viên phù hợp. Chọn môn/ngày rồi tìm lại.</p>
+            </form>
             <!-- Danh sách thẻ gia sư -->
             <div class="tutors-list">
               <div v-for="tutor in filteredTutors" :key="tutor.id" class="tutor-card">
@@ -202,32 +212,11 @@
                   <div class="tutor-details">
                     <h4 class="tutor-name">{{ tutor.name }}</h4>
                     <p class="tutor-subject">{{ tutor.subject }}</p>
-                    <div class="tutor-rating">
-                      <i class="fa-solid fa-star star-icon"></i>
-                      <span class="rating-num">{{ tutor.rating }}</span>
-                      <span class="sessions-count">({{ tutor.sessions }} buổi dạy)</span>
-                    </div>
+
                   </div>
                 </div>
 
-                <!-- Khung giờ khớp -->
-                <div class="tutor-matched-slots">
-                  <span
-                    v-for="(slot, idx) in tutor.matchedSlots"
-                    :key="idx"
-                    class="matched-slot-pill"
-                  >
-                    {{ slot }}
-                  </span>
-                </div>
-
-                <!-- Nút chọn gia sư -->
-                <button
-                  class="btn btn-select-tutor w-100"
-                  @click="handleSelectTutor(tutor)"
-                >
-                  <i class="fa-regular fa-calendar-check me-2"></i> Đặt lịch với giảng viên
-                </button>
+                <div class="tutor-matched-slots"><button v-for="(slot, index) in tutor.slots" :key="index" class="btn btn-outline-primary mb-2" @click="handleSelectTutor(tutor, slot)">{{ new Date(slot.start).toLocaleString('vi-VN') }} → {{ new Date(slot.end).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}) }} · Đặt học thử</button></div>
               </div>
             </div>
           </aside>
@@ -239,6 +228,9 @@
 
 <script>
 import thoiGianRanhService from "../../services/thoiGianRanhService";
+import product from "../../services/productService";
+import { lopHocService } from "../../services/lopHocService";
+import { availabilitySlots } from "../../services/flowHelpers";
 
 const DAY_MAP = {
   1: { key: "Mon", name: "Thứ 2", short: "T2" },
@@ -279,6 +271,7 @@ export default {
       },
       // Danh sách khung giờ tiếng Việt
       timeSlots: [
+        { key: "07:00", label: "07:00 - 08:00", start: "07:00:00", end: "08:00:00", shift: "morning", period: "Sáng" },
         { key: "08:00", label: "08:00 - 09:00", start: "08:00:00", end: "09:00:00", shift: "morning", period: "Sáng" },
         { key: "09:00", label: "09:00 - 10:00", start: "09:00:00", end: "10:00:00", shift: "morning", period: "Sáng" },
         { key: "10:00", label: "10:00 - 11:00", start: "10:00:00", end: "11:00:00", shift: "morning", period: "Sáng" },
@@ -290,59 +283,11 @@ export default {
         { key: "19:00", label: "19:00 - 20:00", start: "19:00:00", end: "20:00:00", shift: "evening", period: "Tối" },
         { key: "20:00", label: "20:00 - 21:00", start: "20:00:00", end: "21:00:00", shift: "evening", period: "Tối" }
       ],
-      // Mặc định các slot được chọn
-      selectedSlots: [
-        "Wed_09:00",
-        "Sat_09:00",
-        "Tue_10:00",
-        "Thu_11:00"
-      ],
-      // Danh sách gia sư gợi ý (được Việt hóa)
-      tutors: [
-        {
-          id: 1,
-          name: "Cô Sarah Jenkins",
-          subject: "Giải tích nâng cao, Vật lý",
-          rating: "4.9",
-          sessions: 120,
-          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
-          matchedSlots: ["Thứ 4 09:00", "Thứ 5 11:00"],
-          slotKeys: ["Wed_09:00", "Thu_11:00"]
-        },
-        {
-          id: 2,
-          name: "Thầy David Chen",
-          subject: "Đại số, Hình học, SAT Prep",
-          rating: "4.8",
-          sessions: 85,
-          avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
-          matchedSlots: ["Thứ 3 10:00", "Thứ 7 09:00"],
-          slotKeys: ["Tue_10:00", "Sat_09:00"]
-        },
-        {
-          id: 3,
-          name: "Thầy Nguyễn Minh Triết",
-          subject: "Tiếng Anh Giao tiếp, IELTS 8.0",
-          rating: "5.0",
-          sessions: 210,
-          avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80",
-          matchedSlots: ["Thứ 2 19:00", "Thứ 6 18:00"],
-          slotKeys: ["Mon_19:00", "Fri_18:00"]
-        },
-        {
-          id: 4,
-          name: "Cô Lê Thị Hoàng Yến",
-          subject: "Hóa học THPT, Luyện thi ĐH",
-          rating: "4.9",
-          sessions: 145,
-          avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80",
-          matchedSlots: ["Thứ 5 14:00", "Chủ nhật 10:00"],
-          slotKeys: ["Thu_14:00", "Sun_10:00"]
-        }
-      ]
+      selectedSlots: [], tutors: [], subjects: [], matchSubject: '', matchDate: '', matchDuration: 60, matching: false, matchError: '', scheduleError: '', loadGeneration: 0
     };
   },
   computed: {
+    roleIsStudent() { return localStorage.getItem('role') === 'hoc_vien' },
     // Tính toán các ngày trong tuần hiện tại / đang chọn
     weekDays() {
       const today = new Date();
@@ -392,58 +337,38 @@ export default {
       return this.timeSlots.filter(s => s.shift === this.activeShiftFilter);
     },
     // Sắp xếp giảng viên có ca trùng khớp lên trước
-    filteredTutors() {
-      return [...this.tutors].sort((a, b) => {
-        const matchA = (a.slotKeys || []).filter(k => this.selectedSlots.includes(k)).length;
-        const matchB = (b.slotKeys || []).filter(k => this.selectedSlots.includes(k)).length;
-        return matchB - matchA;
-      });
-    }
+    filteredTutors() { return this.tutors }
   },
   mounted() {
     this.loadSavedSchedule();
+    this.loadSubjects();
+    window.addEventListener('edulink:user-updated', this.accountChanged);
+    window.addEventListener('storage', this.accountChanged);
   },
+  beforeUnmount() { this.loadGeneration++; clearTimeout(this.toast.timer); window.removeEventListener('edulink:user-updated', this.accountChanged); window.removeEventListener('storage', this.accountChanged); },
   methods: {
     // Tải lịch đã lưu từ Backend CSDL hoặc LocalStorage
+    accountChanged() { this.selectedSlots = []; this.tutors = []; this.loadSavedSchedule(); },
     async loadSavedSchedule() {
-      this.loading = true;
-      // 1. Kiểm tra localStorage trước để có dữ liệu tức thì
-      const localSaved = localStorage.getItem("edulink_my_schedule");
-      if (localSaved) {
-        try {
-          const parsed = JSON.parse(localSaved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            this.selectedSlots = parsed;
-          }
-        } catch (e) {}
-      }
-
-      // 2. Tải từ CSDL nếu đã đăng nhập
-      const token = localStorage.getItem("token") || localStorage.getItem("edulink_token");
-      const role = localStorage.getItem("role") || "hoc_vien";
-      if (token) {
-        try {
-          const res = await thoiGianRanhService.getSchedule(role);
-          if (res && res.status && Array.isArray(res.data)) {
-            if (res.data.length > 0) {
-              const serverSlots = [];
-              res.data.forEach(item => {
-                const dayObj = DAY_MAP[item.ngay_trong_tuan];
-                if (!dayObj) return;
-                const timeKey = (item.thoi_gian_bat_dau || "").substring(0, 5);
-                serverSlots.push(`${dayObj.key}_${timeKey}`);
-              });
-              this.selectedSlots = serverSlots;
-              this.lastSavedTime = new Date();
-              this.hasUnsavedChanges = false;
-              localStorage.setItem("edulink_my_schedule", JSON.stringify(serverSlots));
-            }
-          }
-        } catch (err) {
-          console.warn("Chưa thể đồng bộ với CSDL server:", err);
-        }
-      }
-      this.loading = false;
+      const generation = ++this.loadGeneration;
+      this.selectedSlots = []; this.loading = true; this.scheduleError = '';
+      try {
+        const response = await thoiGianRanhService.getSchedule(localStorage.getItem('role'));
+        if (generation !== this.loadGeneration) return;
+        if (!response.status || !Array.isArray(response.data)) throw new Error(response.message || 'Không đọc được lịch rảnh.');
+        this.selectedSlots = availabilitySlots(response.data, this.timeSlots.map(slot => slot.key));
+        this.lastSavedTime = new Date(); this.hasUnsavedChanges = false;
+      } catch (error) { if (generation === this.loadGeneration) this.scheduleError = error.message || 'Không thể tải lịch. Vui lòng thử lại.'; }
+      finally { if (generation === this.loadGeneration) this.loading = false; }
+    },
+    async loadSubjects() { try { this.subjects = (await lopHocService.getMonHoc()).data || []; } catch (error) { this.matchError = error.message; } },
+    async findTutors() {
+      this.matching = true; this.matchError = ''; this.tutors = [];
+      try {
+        const result = await product.matching({ id_mon_hoc: this.matchSubject, date: this.matchDate, duration_minutes: this.matchDuration });
+        this.tutors = (result.data || []).map(row => ({ ...row, id: row.id_giao_vien, name: row.ho_ten, avatar: row.hinh_anh, subject: this.subjects.find(subject => subject.id === Number(this.matchSubject))?.ten_mon_hoc }));
+      } catch (error) { this.matchError = error.message; }
+      finally { this.matching = false; }
     },
 
     // Kiểm tra slot có đang được chọn hay không (hỗ trợ cả định dạng cũ)
@@ -500,64 +425,19 @@ export default {
 
     // LƯU LỊCH RẢNH VÀO CƠ SỞ DỮ LIỆU
     async saveSchedule() {
+      if (this.saving) return;
       this.saving = true;
-      const token = localStorage.getItem("token") || localStorage.getItem("edulink_token");
-      const role = localStorage.getItem("role") || "hoc_vien";
-
-      // Chuẩn hóa dữ liệu theo định dạng backend
-      const schedules = [];
-      this.selectedSlots.forEach(slotKey => {
-        const parts = slotKey.split("_");
-        const dayKey = parts[0];
-        let timeKey = parts[1];
-
-        // Chuẩn hóa từ "9:00 AM" về "09:00" nếu cần
-        if (timeKey.includes("AM") || timeKey.includes("PM")) {
-          const num = parseInt(timeKey);
-          timeKey = num.toString().padStart(2, "0") + ":00";
-        }
-
-        const dayNum = KEY_TO_DAY_NUM[dayKey];
-        if (dayNum === undefined) return;
-
-        const slotDef = this.timeSlots.find(s => s.key === timeKey);
-        const startTime = slotDef ? slotDef.start : `${timeKey}:00`;
-        const endTime = slotDef ? slotDef.end : this.calcEndTime(timeKey);
-
-        schedules.push({
-          ngay_trong_tuan: dayNum,
-          thoi_gian_bat_dau: startTime,
-          thoi_gian_ket_thuc: endTime
-        });
+      const schedules = this.selectedSlots.map(key => {
+        const [day, time] = key.split('_'); const slot = this.timeSlots.find(value => value.key === time);
+        return { ngay_trong_tuan: KEY_TO_DAY_NUM[day], thoi_gian_bat_dau: slot.start, thoi_gian_ket_thuc: slot.end };
       });
-
-      // 1. Luôn lưu vào LocalStorage
-      localStorage.setItem("edulink_my_schedule", JSON.stringify(this.selectedSlots));
-
-      // 2. Gửi request lưu vào Backend nếu đã có phiên đăng nhập
-      if (token) {
-        try {
-          const res = await thoiGianRanhService.updateSchedule(role, schedules);
-          if (res && res.status) {
-            this.hasUnsavedChanges = false;
-            this.lastSavedTime = new Date();
-            this.showToast("success", "Đã lưu lịch rảnh thành công vào cơ sở dữ liệu!");
-          } else {
-            this.showToast("error", res?.message || "Không thể lưu lịch rảnh.");
-          }
-        } catch (err) {
-          console.error("Lỗi lưu lịch rảnh:", err);
-          this.showToast("error", err?.message || "Lỗi kết nối máy chủ khi lưu lịch.");
-        } finally {
-          this.saving = false;
-        }
-      } else {
-        // Chưa đăng nhập: thông báo lưu cục bộ và nhắc đăng nhập
-        this.saving = false;
-        this.hasUnsavedChanges = false;
-        this.lastSavedTime = new Date();
-        this.showToast("info", "Đã lưu lịch rảnh vào bộ nhớ. Vui lòng đăng nhập để đồng bộ vào tài khoản.");
-      }
+      try {
+        const result = await thoiGianRanhService.updateSchedule(localStorage.getItem('role'), schedules);
+        if (!result.status) throw new Error(result.message || 'Không thể lưu lịch.');
+        this.hasUnsavedChanges = false; this.lastSavedTime = new Date(); this.scheduleError = '';
+        this.showToast('success', result.message || 'Đã lưu lịch rảnh vào máy chủ.'); this.tutors = [];
+      } catch (error) { this.showToast('error', error.message || 'Không thể lưu lịch rảnh.'); }
+      finally { this.saving = false; }
     },
 
     // Tính thời gian kết thúc mặc định (+1 tiếng)
@@ -586,11 +466,8 @@ export default {
     },
 
     // Xử lý khi bấm nút chọn gia sư
-    handleSelectTutor(tutor) {
-      alert(
-        `Bạn đã chọn ${tutor.name} (${tutor.subject})!\n` +
-        `EduLink sẽ liên hệ với bạn để hoàn tất đăng ký lớp học theo lịch rảnh đã chọn.`
-      );
+    handleSelectTutor(tutor, slot) {
+      this.$router.push({ path: '/dat-lich-hoc-thu', query: { id_giao_vien: tutor.id_giao_vien, id_mon_hoc: this.matchSubject, subject: tutor.subject, start: slot.start, end: slot.end } });
     }
   }
 };

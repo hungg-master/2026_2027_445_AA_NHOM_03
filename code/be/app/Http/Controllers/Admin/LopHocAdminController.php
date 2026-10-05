@@ -5,8 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LopHoc\DuyetLopHocRequest;
 use App\Models\LopHoc;
+use App\Services\ClassLifecycleService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -51,10 +52,12 @@ class LopHocAdminController extends Controller
                 'data' => $data,
             ]);
         } catch (\Exception $e) {
-            Log::error('Admin lop-hoc index error: ' . $e->getMessage());
+            report($e);
+            Log::error('Admin lop-hoc index error: '.$e->getMessage());
+
             return response()->json([
                 'status' => false,
-                'message' => 'Đã có lỗi xảy ra: ' . $e->getMessage(),
+                'message' => 'Không thể xử lý yêu cầu lúc này. Vui lòng thử lại.',
             ], 500);
         }
     }
@@ -68,7 +71,7 @@ class LopHocAdminController extends Controller
             $lopHoc = LopHoc::with(['monHoc', 'phongHoc', 'giaoVien', 'dangKyLops.hocVien'])
                 ->find($id);
 
-            if (!$lopHoc) {
+            if (! $lopHoc) {
                 return response()->json([
                     'status' => false,
                     'message' => 'Không tìm thấy lớp học.',
@@ -83,10 +86,12 @@ class LopHocAdminController extends Controller
                 'data' => $lopHoc,
             ]);
         } catch (\Exception $e) {
-            Log::error('Admin lop-hoc show error: ' . $e->getMessage());
+            report($e);
+            Log::error('Admin lop-hoc show error: '.$e->getMessage());
+
             return response()->json([
                 'status' => false,
-                'message' => 'Đã có lỗi xảy ra: ' . $e->getMessage(),
+                'message' => 'Không thể xử lý yêu cầu lúc này. Vui lòng thử lại.',
             ], 500);
         }
     }
@@ -97,36 +102,20 @@ class LopHocAdminController extends Controller
      */
     public function duyet(DuyetLopHocRequest $request)
     {
-        try {
-            $admin = Auth::guard('sanctum')->user();
-            $lopHoc = LopHoc::find($request->id);
-
-            if (!$lopHoc) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Không tìm thấy lớp học.',
-                ], 404);
+        $lopHoc = DB::transaction(function () use ($request) {
+            $class = LopHoc::whereKey($request->integer('id'))->lockForUpdate()->firstOrFail();
+            if ($request->input('tinh_trang') === 'da_huy') {
+                app(ClassLifecycleService::class)->cancel($class);
+            } else {
+                abort_if(in_array($class->tinh_trang, ['da_huy', 'da_ket_thuc', 'dang_hoc']), 409, 'Không thể mở lại lớp đã hủy, đang học hoặc kết thúc.');
+                abort_unless($class->giaoVien?->trang_thai_duyet === 'da_duyet' && ! $class->giaoVien->is_block && $class->giaoVien->tinh_trang == 1, 403, 'Giáo viên chưa đủ điều kiện.');
+                $class->update(['tinh_trang' => $request->input('tinh_trang')]);
             }
 
-            $lopHoc->tinh_trang = $request->tinh_trang;
-            $lopHoc->save();
+            return $class;
+        }, 5);
 
-            $msg = $request->tinh_trang === 'da_huy'
-                ? 'Đã hủy lớp học thành công!'
-                : 'Đã cập nhật trạng thái lớp học!';
-
-            return response()->json([
-                'status' => true,
-                'message' => $msg,
-                'data' => $lopHoc,
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Admin duyet lop-hoc error: ' . $e->getMessage());
-            return response()->json([
-                'status' => false,
-                'message' => 'Cập nhật thất bại: ' . $e->getMessage(),
-            ], 500);
-        }
+        return response()->json(['status' => true, 'data' => $lopHoc]);
     }
 
     /**
@@ -153,10 +142,12 @@ class LopHocAdminController extends Controller
                 'data' => $stats,
             ]);
         } catch (\Exception $e) {
-            Log::error('Admin thong-ke error: ' . $e->getMessage());
+            report($e);
+            Log::error('Admin thong-ke error: '.$e->getMessage());
+
             return response()->json([
                 'status' => false,
-                'message' => 'Đã có lỗi xảy ra: ' . $e->getMessage(),
+                'message' => 'Không thể xử lý yêu cầu lúc này. Vui lòng thử lại.',
             ], 500);
         }
     }

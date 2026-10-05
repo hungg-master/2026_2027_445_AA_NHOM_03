@@ -6,11 +6,11 @@
       <div class="hero-container">
         <div class="hero-content">
           <div class="hero-badge">
-            <i class="fa-solid fa-star text-warning me-1"></i> Nền tảng Học tập & Gia sư Tốt nhất 2025
+            <i class="fa-solid fa-star text-warning me-1"></i> Nền tảng Học tập & Gia sư
           </div>
           <h1 class="hero-title">Khơi dậy Tiềm năng - <br><span class="highlight-text">Kiến tạo Tương lai</span> cùng EduLink</h1>
           <p class="hero-desc">
-            Nền tảng kết nối gia sư và học viên thông minh hàng đầu. Tích hợp thuật toán tự động ghép lịch ưu việt và công nghệ xác thực Face ID đảm bảo an toàn tuyệt đối cho mọi buổi học trực tuyến.
+            Nền tảng kết nối gia sư và học viên thông minh hàng đầu. Tích hợp thuật toán tự động ghép lịch ưu việt và công nghệ xác thực Face ID hỗ trợ đối sánh danh tính cho mọi buổi học trực tuyến.
           </p>
           <div class="hero-action-buttons">
             <button class="btn btn-primary btn-lg hero-btn-main" @click="openTrialModal('Học thử Tổng quát')">
@@ -21,22 +21,6 @@
             </a>
           </div>
 
-          <div class="hero-stats-bar">
-            <div class="h-stat">
-              <h4>10,000+</h4>
-              <p>Gia sư chọn lọc</p>
-            </div>
-            <div class="h-stat-divider"></div>
-            <div class="h-stat">
-              <h4>98%</h4>
-              <p>Học viên tiến bộ</p>
-            </div>
-            <div class="h-stat-divider"></div>
-            <div class="h-stat">
-              <h4>50+</h4>
-              <p>Môn học đa dạng</p>
-            </div>
-          </div>
         </div>
       </div>
     </section>
@@ -44,7 +28,7 @@
     <section class="section-features">
       <div class="section-container text-center">
         <div class="section-tag">ĐẶC QUYỀN CÔNG NGHỆ</div>
-        <h2 class="section-heading">Tại sao hơn 28,000 phụ huynh chọn EduLink?</h2>
+        <h2 class="section-heading">Các chức năng của EduLink</h2>
         <p class="section-sub">
           Sự kết hợp hoàn hảo giữa công nghệ sinh trắc học hiện đại và mạng lưới gia sư sư phạm được kiểm định độc lập.
         </p>
@@ -278,157 +262,18 @@
         <div class="tutors-header-flex">
           <div>
             <div class="section-tag">ĐỘI NGŨ GIẢNG VIÊN VÀ GIA SƯ</div>
-            <h2 class="section-heading mb-0">Gia sư tiêu biểu được yêu thích nhất</h2>
+            <h2 class="section-heading mb-0">Giảng viên đã được duyệt</h2>
           </div>
           <div class="carousel-nav-btns">
-            <button class="btn-nav-circle" @click="prevTutor"><i class="fa-solid fa-chevron-left"></i></button>
-            <button class="btn-nav-circle" @click="nextTutor"><i class="fa-solid fa-chevron-right"></i></button>
           </div>
         </div>
 
-        <!-- 3 Tutor Cards Grid -->
-        <div class="tutors-grid mt-4">
-          <!-- Tutor 1: TS. Nguyễn Minh Triết -->
-          <div class="tutor-showcase-card">
-            <div class="tutor-cover-wrap">
-              <img
-                src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&q=80"
-                alt="TS. Nguyễn Minh Triết"
-                class="tutor-cover-img"
-              />
-              <span class="tutor-badge-tag tag-verified">
-                <i class="fa-solid fa-shield-check me-1"></i> Gia sư xuất sắc EduLink
-              </span>
-              <span class="tutor-mode-tag tag-blue">Kèm 1:1 & Lớp nhóm</span>
-            </div>
-
-            <div class="tutor-card-body">
-              <div class="tutor-card-name-row">
-                <h3 class="tutor-main-name">TS. Nguyễn Minh Triết</h3>
-                <div class="tutor-star-rating">
-                  <i class="fa-solid fa-star text-warning"></i>
-                  <span class="star-score">4.9</span>
-                  <span class="review-count">(128)</span>
-                </div>
-              </div>
-
-              <p class="tutor-short-bio">
-                Giảng viên Khoa Toán - Tin học ĐH Khoa học Tự Nhiên. 8+ năm bồi dưỡng học sinh giỏi và luyện thi ĐGNL.
-              </p>
-
-              <div class="tutor-skill-pills">
-                <span class="skill-pill">Toán Chuyên 12</span>
-                <span class="skill-pill">Đại số nâng cao</span>
-                <span class="skill-pill">Toán ĐGNL ĐHQG</span>
-              </div>
-
-              <div class="tutor-card-action-bar">
-                <div class="tutor-price-info">
-                  <span class="price-prefix">Học phí:</span>
-                  <span class="price-number">350.000đ</span>
-                  <span class="price-suffix">/ một buổi</span>
-                </div>
-                <button class="btn btn-primary btn-book-tutor" @click="openTrialModal('TS. Nguyễn Minh Triết - Toán')">
-                  Đặt lịch thử
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Tutor 2: ThS. Lê Phương Thảo -->
-          <div class="tutor-showcase-card">
-            <div class="tutor-cover-wrap">
-              <img
-                src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80"
-                alt="ThS. Lê Phương Thảo"
-                class="tutor-cover-img"
-              />
-              <span class="tutor-badge-tag tag-verified">
-                <i class="fa-solid fa-shield-check me-1"></i> Gia sư xuất sắc EduLink
-              </span>
-              <span class="tutor-mode-tag tag-green">IELTS 8.5</span>
-            </div>
-
-            <div class="tutor-card-body">
-              <div class="tutor-card-name-row">
-                <h3 class="tutor-main-name">ThS. Lê Phương Thảo</h3>
-                <div class="tutor-star-rating">
-                  <i class="fa-solid fa-star text-warning"></i>
-                  <span class="star-score">5.0</span>
-                  <span class="review-count">(96)</span>
-                </div>
-              </div>
-
-              <p class="tutor-short-bio">
-                Thạc sĩ Ngôn ngữ Ứng dụng, 6+ năm luyện thi IELTS & Tiếng Anh chuyên sâu (IELTS 8.5, Band 8.5 Speaking 1:1).
-              </p>
-
-              <div class="tutor-skill-pills">
-                <span class="skill-pill">IELTS 8.5+</span>
-                <span class="skill-pill">Speaking 1 kèm 1</span>
-                <span class="skill-pill">Giao tiếp phản xạ</span>
-              </div>
-
-              <div class="tutor-card-action-bar">
-                <div class="tutor-price-info">
-                  <span class="price-prefix">Học phí:</span>
-                  <span class="price-number">300.000đ</span>
-                  <span class="price-suffix">/ một buổi</span>
-                </div>
-                <button class="btn btn-primary btn-book-tutor" @click="openTrialModal('ThS. Lê Phương Thảo - IELTS')">
-                  Đặt lịch thử
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Tutor 3: ThS. Trần Hoàng Nam -->
-          <div class="tutor-showcase-card">
-            <div class="tutor-cover-wrap">
-              <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80"
-                alt="ThS. Trần Hoàng Nam"
-                class="tutor-cover-img"
-              />
-              <span class="tutor-badge-tag tag-tech">
-                <i class="fa-solid fa-code me-1"></i> Chuyên gia Công nghệ
-              </span>
-              <span class="tutor-mode-tag tag-purple">Lập trình & STEM</span>
-            </div>
-
-            <div class="tutor-card-body">
-              <div class="tutor-card-name-row">
-                <h3 class="tutor-main-name">ThS. Trần Hoàng Nam</h3>
-                <div class="tutor-star-rating">
-                  <i class="fa-solid fa-star text-warning"></i>
-                  <span class="star-score">4.9</span>
-                  <span class="review-count">(114)</span>
-                </div>
-              </div>
-
-              <p class="tutor-short-bio">
-                Senior Tech Lead tại Top Fintech công nghệ, 5+ năm giảng dạy lập trình cho thanh thiếu niên, chuyên gia AI & React.
-              </p>
-
-              <div class="tutor-skill-pills">
-                <span class="skill-pill">Frontend React</span>
-                <span class="skill-pill">Python cơ bản</span>
-                <span class="skill-pill">Thuật toán lập trình</span>
-              </div>
-
-              <div class="tutor-card-action-bar">
-                <div class="tutor-price-info">
-                  <span class="price-prefix">Học phí:</span>
-                  <span class="price-number">280.000đ</span>
-                  <span class="price-suffix">/ một buổi</span>
-                </div>
-                <button class="btn btn-primary btn-book-tutor" @click="openTrialModal('ThS. Trần Hoàng Nam - Lập trình')">
-                  Đặt lịch thử
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <p v-if="teacherError" class="alert alert-warning" role="alert">{{ teacherError }}</p>
+        <p v-if="!teachers.length && !teacherError" class="mt-3">Chưa có giảng viên trong danh sách.</p>
+        <div class="tutors-grid mt-4"><article v-for="teacher in teachers.slice(0,3)" :key="teacher.id" class="tutor-showcase-card">
+          <div v-if="teacher.hinh_anh" class="tutor-cover-wrap"><img :src="teacher.hinh_anh" :alt="teacher.ho_ten" class="tutor-cover-img" /></div>
+          <div class="tutor-card-body"><h3 class="tutor-main-name">{{ teacher.ho_ten }}</h3><p class="tutor-short-bio">{{ teacher.chuc_danh }} · {{ teacher.so_nam_kinh_nghiem || 0 }} năm kinh nghiệm</p><p class="tutor-short-bio">{{ teacher.mo_ta || 'Chưa cập nhật giới thiệu.' }}</p><router-link to="/my-schedule" class="btn btn-primary btn-book-tutor">Tìm khung giờ học thử</router-link></div>
+        </article></div>
       </div>
     </section>
 
@@ -460,9 +305,9 @@
               <span class="step-number-pill">2</span>
               <i class="fa-solid fa-wand-magic-sparkles"></i>
             </div>
-            <h4 class="step-title">AI ghép nối & Học thử</h4>
+            <h4 class="step-title">Ghép lịch & Học thử</h4>
             <p class="step-desc">
-              Hệ thống AI xuất sắc (Smart Match) kết nối gia sư phù hợp nhất. Phụ huynh đặt lịch học thử 1 buổi hoàn toàn miễn phí.
+              Chọn môn học, ngày và thời lượng để tìm giảng viên có lịch phù hợp. Lịch học thử được xác nhận sau khi giảng viên tiếp nhận.
             </p>
           </div>
 
@@ -702,11 +547,13 @@
 
 <script>
 import { API_BASE, logout as logoutSession } from '../../services/api';
+import http from '../../services/http';
+import { accepted } from '../../services/productContract';
 export default {
   name: "LandingPage",
     data() {
     return {
-      isLoggedIn: false,
+      isLoggedIn: false, teachers: [], teacherError: '',
       showUserDropdown: false,
       userAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80",
       userName: "",
@@ -736,6 +583,7 @@ export default {
     };
     },
   mounted() {
+    this.loadTeachers();
     const token = localStorage.getItem("token");
     if (token) {
       this.isLoggedIn = true;
@@ -756,6 +604,7 @@ export default {
     document.removeEventListener("click", this.closeDropdownOnClickOutside);
   },
   methods: {
+    async loadTeachers() { try { this.teachers = (await accepted(http.get('/client/giao-vien/data'))).data || []; } catch (error) { this.teacherError = error.message || 'Không thể tải danh sách giảng viên.'; } },
     toggleUserDropdown(e) {
       this.showUserDropdown = !this.showUserDropdown;
     },
@@ -777,17 +626,14 @@ export default {
       this.$router.push("/");
     },
     handleChangePassword() {
-      window.alert('Chuc nang doi mat khau se som duoc cap nhat!');
+      this.$router.push('/client/profile#password');
       this.showUserDropdown = false;
     },
     handleUpdateAvatar() {
-      window.alert('Chuc nang cap nhat avatar se som duoc cap nhat!');
+      this.$router.push('/client/profile#avatar');
       this.showUserDropdown = false;
     },
-    handleSearchTutor() {
-      alert(`Đang tìm kiếm gia sư theo tiêu chí:\n- Môn: ${this.searchSubject}\n- Khu vực: ${this.searchLocation}\n- Ca học: ${this.searchTimeSlot}\n\nHệ thống AI Smart Match đang tìm thấy 24 gia sư tương thích!`);
-      this.$router.push("/my-schedule");
-    },
+    handleSearchTutor() { this.$router.push('/my-schedule'); },
     openTrialModal(programName) {
       this.$router.push({
         path: '/dat-lich-hoc-thu',

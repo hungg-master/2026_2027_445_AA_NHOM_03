@@ -1,31 +1,12 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
+// Historical duplicate: the canonical table is owned by its 15/09 migration.
+// Retain this name for existing ledgers; rollback must not drop another migration's table.
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
-    {
-        Schema::create('mon_hocs', function (Blueprint $table) {
-            $table->id();
-            $table->string('ten_mon_hoc');
-            $table->text('mo_ta')->nullable();
-            $table->string('lop')->nullable();
-            $table->string('tinh_trang')->nullable();
-            $table->timestamps();
-        });
-    }
+    public function up(): void {}
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('mon_hocs');
-    }
+    public function down(): void {}
 };

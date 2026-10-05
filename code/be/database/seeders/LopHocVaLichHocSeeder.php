@@ -2,22 +2,25 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Carbon\Carbon;
-use App\Models\MonHoc;
-use App\Models\PhongHoc;
+use App\Models\DangKyLop;
 use App\Models\GiaoVien;
 use App\Models\HocVien;
 use App\Models\LopHoc;
-use App\Models\DangKyLop;
+use App\Models\MonHoc;
+use App\Models\PhongHoc;
 use App\Models\ThoiGianRanh;
+use App\Services\LessonScheduleService;
+use Carbon\Carbon;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class LopHocVaLichHocSeeder extends Seeder
 {
     public function run(): void
     {
+        if (app()->environment('production')) {
+            throw new \RuntimeException('Dữ liệu mẫu chỉ dành cho môi trường phát triển.');
+        }
         $this->command->info('=== BẮT ĐẦU SEED DỮ LIỆU LỚP HỌC & LỊCH HỌC ===');
 
         // -------------------------------------------------------------
@@ -46,7 +49,7 @@ class LopHocVaLichHocSeeder extends Seeder
             );
             $monHocMap[$mh['ten_mon_hoc']] = $record->id;
         }
-        $this->command->info('-> Đã kiểm tra/khởi tạo ' . count($monHocMap) . ' môn học.');
+        $this->command->info('-> Đã kiểm tra/khởi tạo '.count($monHocMap).' môn học.');
 
         // -------------------------------------------------------------
         // 2. SEED PHÒNG HỌC
@@ -70,7 +73,7 @@ class LopHocVaLichHocSeeder extends Seeder
             );
             $phongHocMap[$ph['so_phong']] = $record->id;
         }
-        $this->command->info('-> Đã kiểm tra/khởi tạo ' . count($phongHocMap) . ' phòng học.');
+        $this->command->info('-> Đã kiểm tra/khởi tạo '.count($phongHocMap).' phòng học.');
 
         // -------------------------------------------------------------
         // 3. SEED GIÁO VIÊN
@@ -136,27 +139,17 @@ class LopHocVaLichHocSeeder extends Seeder
                 ['email' => $gv['email']],
                 $gv
             );
-            // Luôn đảm bảo trạng thái đã duyệt
-            if ($record->trang_thai_duyet !== 'da_duyet') {
-                $record->trang_thai_duyet = 'da_duyet';
-                $record->is_active = 1;
-                $record->tinh_trang = 1;
-                $record->save();
-            }
             $giaoVienList[] = $record;
         }
-        $this->command->info('-> Đã kiểm tra/khởi tạo ' . count($giaoVienList) . ' giáo viên chuẩn EduLink.');
+        $this->command->info('-> Đã kiểm tra/khởi tạo '.count($giaoVienList).' giáo viên chuẩn EduLink.');
 
         // -------------------------------------------------------------
         // 4. KIỂM TRA HỌC VIÊN CHÍNH
         // -------------------------------------------------------------
-        $hocVienChinh = HocVien::where('email', 'phuhung1932004@gmail.com')->first();
-        if (!$hocVienChinh) {
-            $hocVienChinh = HocVien::find(2);
-        }
-        if (!$hocVienChinh) {
+        $hocVienChinh = HocVien::where('email', 'student.demo@smarttrial.test')->first();
+        if (! $hocVienChinh) {
             $hocVienChinh = HocVien::firstOrCreate(
-                ['email' => 'phuhung1932004@gmail.com'],
+                ['email' => 'student.demo@smarttrial.test'],
                 [
                     'ho_ten' => 'Phú Hưng Phạm',
                     'password' => Hash::make('123456'),
@@ -166,9 +159,9 @@ class LopHocVaLichHocSeeder extends Seeder
                 ]
             );
         }
-        $this->command->info('-> Học viên đăng ký lịch học: ' . $hocVienChinh->ho_ten . ' (ID: ' . $hocVienChinh->id . ')');
+        $this->command->info('-> Học viên đăng ký lịch học: '.$hocVienChinh->ho_ten.' (ID: '.$hocVienChinh->id.')');
 
-        $hocVienPhu = HocVien::where('id', '!=', $hocVienChinh->id)->first();
+        $hocVienPhu = null;
 
         // -------------------------------------------------------------
         // 5. SEED LỚP HỌC (LopHoc)
@@ -232,7 +225,7 @@ class LopHocVaLichHocSeeder extends Seeder
                 'hinh_thuc' => 'offline',
                 'link_online' => null,
                 'hoc_phi' => 3200000.00,
-                'si_so_toi_da' => 12,
+                'si_so_toi_da' => 5,
                 'thoi_gian_bat_dau' => $startOfWeek->copy()->addDays(5)->setTime(8, 30, 0), // T7: 08:30 - 10:30
                 'thoi_gian_ket_thuc' => $startOfWeek->copy()->addDays(5)->setTime(10, 30, 0),
                 'tinh_trang' => 'dang_mo',
@@ -304,7 +297,7 @@ class LopHocVaLichHocSeeder extends Seeder
                 'hinh_thuc' => 'offline',
                 'link_online' => null,
                 'hoc_phi' => 2200000.00,
-                'si_so_toi_da' => 15,
+                'si_so_toi_da' => 5,
                 'thoi_gian_bat_dau' => $nextWeek->copy()->addDays(3)->setTime(14, 0, 0), // T5 tuần sau: 14:00 - 16:00
                 'thoi_gian_ket_thuc' => $nextWeek->copy()->addDays(3)->setTime(16, 0, 0),
                 'tinh_trang' => 'dang_mo',
@@ -318,7 +311,7 @@ class LopHocVaLichHocSeeder extends Seeder
                 'hinh_thuc' => 'online',
                 'link_online' => 'https://meet.google.com/van-thpt-vip-12',
                 'hoc_phi' => 1650000.00,
-                'si_so_toi_da' => 35,
+                'si_so_toi_da' => 30,
                 'thoi_gian_bat_dau' => $nextWeek->copy()->addDays(6)->setTime(8, 30, 0), // CN tuần sau: 08:30 - 10:30
                 'thoi_gian_ket_thuc' => $nextWeek->copy()->addDays(6)->setTime(10, 30, 0),
                 'tinh_trang' => 'dang_mo',
@@ -425,7 +418,7 @@ class LopHocVaLichHocSeeder extends Seeder
                 'hinh_thuc' => 'offline',
                 'link_online' => null,
                 'hoc_phi' => 3200000.00,
-                'si_so_toi_da' => 12,
+                'si_so_toi_da' => 5,
                 'thoi_gian_bat_dau' => $startOfWeek->copy()->addDays(5)->setTime(9, 0, 0), // T7: 09:00 - 11:00 (Trùng ca 08:30 - 10:30)
                 'thoi_gian_ket_thuc' => $startOfWeek->copy()->addDays(5)->setTime(11, 0, 0),
                 'tinh_trang' => 'dang_mo',
@@ -462,6 +455,7 @@ class LopHocVaLichHocSeeder extends Seeder
                 ],
                 $item
             );
+            app(LessonScheduleService::class)->ensureSessions($lop);
 
             // Ghi danh học viên chính vào lớp
             if ($shouldEnroll) {
@@ -493,14 +487,13 @@ class LopHocVaLichHocSeeder extends Seeder
             }
         }
 
-        $this->command->info('-> Đã tạo ' . count($lopHocsSeed) . ' lớp học mẫu (cả Online & Offline).');
-        $this->command->info('-> Đã đăng ký ' . $enrolledCount . ' lớp học vào Lịch học của học viên: ' . $hocVienChinh->ho_ten);
+        $this->command->info('-> Đã tạo '.count($lopHocsSeed).' lớp học mẫu (cả Online & Offline).');
+        $this->command->info('-> Đã đăng ký '.$enrolledCount.' lớp học vào Lịch học của học viên: '.$hocVienChinh->ho_ten);
 
         // -------------------------------------------------------------
         // 6. SEED LỊCH RẢNH MẪU CHO HỌC VIÊN & GIÁO VIÊN
         // -------------------------------------------------------------
-        // Xóa lịch rảnh cũ của học viên chính để cập nhật bộ mẫu đồng bộ
-        ThoiGianRanh::where('id_hoc_vien', $hocVienChinh->id)->delete();
+        // Bổ sung lịch mẫu mà không xóa lịch đã chỉnh trước đó.
         $studentFreeSlots = [
             ['ngay_trong_tuan' => 1, 'thoi_gian_bat_dau' => '09:00:00', 'thoi_gian_ket_thuc' => '10:00:00'], // Thứ 2 09:00
             ['ngay_trong_tuan' => 2, 'thoi_gian_bat_dau' => '10:00:00', 'thoi_gian_ket_thuc' => '11:00:00'], // Thứ 3 10:00
@@ -510,7 +503,7 @@ class LopHocVaLichHocSeeder extends Seeder
             ['ngay_trong_tuan' => 6, 'thoi_gian_bat_dau' => '09:00:00', 'thoi_gian_ket_thuc' => '10:00:00'], // Thứ 7 09:00
         ];
         foreach ($studentFreeSlots as $slot) {
-            ThoiGianRanh::create([
+            ThoiGianRanh::firstOrCreate([
                 'id_giao_vien' => null,
                 'id_hoc_vien' => $hocVienChinh->id,
                 'loai_nguoi_dung' => 'hoc_vien',
@@ -520,7 +513,7 @@ class LopHocVaLichHocSeeder extends Seeder
                 'trang_thai' => 'active',
             ]);
         }
-        $this->command->info('-> Đã tạo ' . count($studentFreeSlots) . ' khung giờ rảnh cho học viên ' . $hocVienChinh->ho_ten);
+        $this->command->info('-> Đã tạo '.count($studentFreeSlots).' khung giờ rảnh cho học viên '.$hocVienChinh->ho_ten);
 
         $this->command->info('=== HOÀN TẤT SEED LỚP HỌC & LỊCH HỌC THÀNH CÔNG! ===');
     }

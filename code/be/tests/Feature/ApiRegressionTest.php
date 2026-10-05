@@ -19,6 +19,7 @@ class ApiRegressionTest extends TestCase
         return GiaoVien::create([
             'ho_ten' => 'Test Teacher', 'email' => 'teacher@example.test',
             'password' => 'test-password', 'tinh_trang' => 1, 'is_block' => 0,
+            'trang_thai_duyet' => 'da_duyet',
         ]);
     }
 
@@ -81,7 +82,9 @@ class ApiRegressionTest extends TestCase
                     ->assertOk()->assertJsonPath('status', true);
                 $path = $user->fresh()->face_id_photo_path;
                 Storage::disk('local')->assertExists($path);
-                if ($oldPath) Storage::disk('local')->assertMissing($oldPath);
+                if ($oldPath) {
+                    Storage::disk('local')->assertMissing($oldPath);
+                }
                 $oldPath = $path;
             }
             Auth::forgetGuards();

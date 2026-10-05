@@ -18,6 +18,7 @@ class DangKyLopRequest extends FormRequest
     {
         return [
             'id_lop_hoc' => 'required|exists:lop_hocs,id',
+            'verification_id' => 'required|string|size:64',
         ];
     }
 

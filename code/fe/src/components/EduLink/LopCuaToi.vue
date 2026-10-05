@@ -61,7 +61,7 @@
                 </div>
               </div>
               <div class="card-actions">
-                <a v-if="dk.lop_hoc?.link_online && dk.trang_thai === 'da_xac_nhan'" :href="dk.lop_hoc.link_online" target="_blank" class="btn btn-primary">Vào lớp</a>
+                <router-link v-if="dk.trang_thai === 'da_xac_nhan'" to="/hoc-vien/lich-hoc" class="btn btn-primary">Chọn buổi học</router-link>
                 <button v-if="dk.trang_thai !== 'da_huy' && dk.trang_thai !== 'da_xac_nhan'" class="btn btn-outline" disabled>Chờ duyệt</button>
                 <button v-if="dk.trang_thai !== 'da_huy'" class="btn btn-danger-outline" @click="huyDangKy(dk)">Hủy đăng ký</button>
                 <span v-if="dk.trang_thai === 'da_huy'" class="text-muted small">Đã hủy lúc {{ formatDate(dk.ngay_dang_ky) }}</span>

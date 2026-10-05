@@ -1,45 +1,20 @@
-# SmartTrial — Nền tảng đặt lịch học thử & tư vấn trực tuyến real-time
+# SmartTrial — frontend
 
-> Nền tảng đặt lịch học thử và tư vấn trực tuyến real-time với cơ chế xếp lịch thông minh (Face ID điểm danh AI, xếp lịch tương thích theo thời gian rảnh, thanh toán học phí VietQR tự động).
+Vue 3, Vue Router, Vite và Axios. Hướng dẫn backend, biến môi trường và cấu hình dịch vụ nằm trong [README chung](../README.md).
 
----
+Chạy tại thư mục `code/fe`:
 
-## 🌟 Các chức năng chính
-
-1. **Đăng ký tài khoản học sinh / giảng viên (`/dang-ky`)**:
-   - Giao diện 2 cột hiện đại, hỗ trợ đăng ký tài khoản nhanh, đăng ký qua Google & Facebook.
-2. **Xếp lịch học thử thông minh (`/my-schedule`)**:
-   - Bảng thời gian (Calendar Grid) linh hoạt cho phép học sinh chọn khung giờ rảnh.
-   - Hệ thống gợi ý gia sư / giảng viên phù hợp nhất dựa trên các khung giờ đã chọn.
-3. **Quản lý lớp học & buổi học (`/my-classes`)**:
-   - Theo dõi các buổi học sắp diễn ra (Offline / Online room).
-   - Thống kê chỉ số sĩ số học sinh, số buổi trong tuần và các thao tác quản trị nhanh.
-4. **Xác thực danh tính Face ID (`/face-id`)**:
-   - Hệ thống điểm danh tự động bằng AI và nhận diện khuôn mặt sinh trắc học trước khi vào phòng học.
-   - Kiểm tra điều kiện thiết bị (Webcam, Mic, Internet Ping).
-5. **Thanh toán học phí trực tuyến (`/thanh-toan`)**:
-   - Tích hợp cổng thanh toán VietQR Napas 247 gạch nợ tự động, thẻ ngân hàng và ví điện tử.
-   - Báo cáo chi tiết học phí, áp dụng học bổng khuyến khích và xuất hóa đơn điện tử e-Invoice.
-
----
-
-## 🛠 Công nghệ sử dụng
-
-- **Frontend**: Vue 3 (Options API), Vite, Vue Router 4, Axios
-- **Giao diện**: Bootstrap 5, FontAwesome 6, Boxicons, Custom Scoped CSS
-- **Kiến trúc Layout**: Dynamic layout (`blank-layout` & `default-layout`)
-
----
-
-## 🚀 Cài đặt & Khởi chạy
-
-```bash
-# Cài đặt thư viện
-npm install
-
-# Chạy server phát triển
+```sh
+npm ci
 npm run dev
-
-# Đóng gói sản phẩm (Build)
+npm test
 npm run build
 ```
+
+`VITE_API_BASE_URL` mặc định là `http://localhost:8000/api`. Camera cần localhost hoặc HTTPS và quyền của trình duyệt. Mô hình Face ID và SDK video được tải khi sử dụng.
+
+Giao diện dùng API cho hồ sơ, lịch rảnh, gợi ý giáo viên, học thử, đăng ký lớp, lịch buổi học, hoàn tất buổi học, đánh giá, tư vấn, AI và danh mục quản trị. Face ID gửi descriptor để máy chủ đối sánh và cấp bằng chứng có hạn theo thao tác; trình duyệt không giữ mẫu chuẩn. Luồng này chưa có kiểm tra chống giả mạo khuôn mặt.
+
+Học phí hiện chạy ở chế độ TEST: yêu cầu thanh toán thành công chờ quản trị viên đối soát, chưa tự gạch nợ và chưa có VietQR/cổng thu tiền thật. Đăng nhập dùng tài khoản nội bộ; chưa có đăng nhập Google/Facebook. Tài khoản ngân hàng chỉ hiển thị số đã che.
+
+Kiểm thử frontend bao gồm hành vi, hợp đồng API và kết xuất HTML các màn hình Vue. Kết xuất HTML không kiểm tra được camera, phát âm thanh, hai thiết bị video, email giao nhận hay AI thật; các phần này cần dịch vụ đã cấu hình và thử trực tiếp trên trình duyệt. Thiếu dịch vụ hoặc lỗi mạng được hiển thị thành lỗi, không chuyển thành kết quả thành công.

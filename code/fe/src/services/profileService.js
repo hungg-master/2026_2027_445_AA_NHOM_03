@@ -3,6 +3,7 @@
  * Hỗ trợ cả Học viên và Giáo viên
  */
 import http from './http';
+import product from './productService';
 
 export const profileService = {
   /** Lấy thông tin cá nhân */
@@ -31,11 +32,7 @@ export const profileService = {
 
   /** Lưu vector sinh trắc học Face ID */
   saveFaceIdVector(role = 'hoc_vien', userId, vector) {
-    const prefix = role === 'giao_vien' ? '/giao-vien' : '/hoc-vien';
-    return http.post(`${prefix}/xac-thuc-khuon-mat`, {
-      id: userId,
-      du_lieu_khuon_mat: typeof vector === 'string' ? vector : JSON.stringify(vector)
-    });
+    return product.sample(role, typeof vector === 'string' ? JSON.parse(vector) : vector);
   },
 
   /** Tải lên ảnh Face ID trực tiếp qua FormData */

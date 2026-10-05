@@ -78,6 +78,7 @@
         </div>
 
         <!-- Loading -->
+        <p v-if="error" class="alert alert-danger" role="alert">{{ error }}</p>
         <div v-if="loading" class="loading-box">
           <i class="fa-solid fa-spinner fa-spin fs-2 text-primary mb-3"></i>
           <p class="mb-0 fw-medium">Đang tải lịch học của bạn...</p>
@@ -127,7 +128,7 @@
                 >
                   <div
                     v-for="dk in getLopInSlot(day, hour)"
-                    :key="dk.id"
+                    :key="dk.id_buoi_hoc"
                     class="session-pill"
                     :class="[
                       'pill-' + (dk.lop_hoc?.hinh_thuc || 'offline'),
@@ -168,7 +169,7 @@
           <div class="session-cards-list">
             <div
               v-for="dk in filteredLichHoc"
-              :key="dk.id"
+              :key="dk.id_buoi_hoc"
               class="session-card"
               :class="['accent-' + getAccent(dk.lop_hoc?.hinh_thuc), 'card-' + dk.trang_thai_buoi]"
             >
@@ -357,102 +358,6 @@
         </div>
 
         <!-- MODAL CẢNH BÁO: CHƯA CÓ FACE ID -->
-        <div v-if="showFaceIdRequiredModal" class="modal-overlay" @click.self="showFaceIdRequiredModal = false">
-          <div class="modal-card text-center p-4" style="max-width: 440px;">
-            <div class="face-warning-icon mb-3">
-              <div class="warning-circle mx-auto d-flex align-items-center justify-content-center">
-                <i class="fa-solid fa-user-lock text-warning" style="font-size: 2.8rem;"></i>
-              </div>
-            </div>
-            <h4 class="fw-bold mb-2 text-danger">Bắt buộc xác thực Face ID!</h4>
-            <p class="text-muted mb-4 small" style="line-height: 1.6;">
-              Tài khoản của bạn <strong>chưa kích hoạt Face ID</strong>. Theo quy định lớp học của EduLink, bạn bắt buộc phải xác thực khuôn mặt trước khi được tham gia phòng học.
-            </p>
-            <div class="d-flex flex-column gap-2">
-              <button class="btn btn-primary py-2 fw-semibold shadow-sm" @click="goToFaceIdSetup">
-                <i class="fa-solid fa-camera me-2"></i>Đến trang kích hoạt Face ID
-              </button>
-              <button class="btn btn-outline-secondary py-2" @click="showFaceIdRequiredModal = false">
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- MODAL QUÉT FACE ID ĐỂ VÀO PHÒNG HỌC -->
-        <div v-if="showFaceVerifyModal" class="modal-overlay" @click.self="cancelFaceVerification">
-          <div class="modal-card face-scan-card p-4 text-center" style="max-width: 460px;">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h5 class="fw-bold mb-0 d-flex align-items-center gap-2 text-dark">
-                <i class="fa-solid fa-id-badge text-primary"></i>
-                <span>Xác thực khuôn mặt Face ID</span>
-              </h5>
-              <button class="btn-close-modal" @click="cancelFaceVerification">&times;</button>
-            </div>
-
-            <p class="text-muted small mb-3">
-              Vui lòng nhìn thẳng vào camera để đối soát khuôn mặt của bạn với tài khoản.
-            </p>
-
-            <!-- Khung Camera quét khuôn mặt -->
-            <div class="face-cam-wrapper position-relative mx-auto mb-3" :class="verifyStatusClass">
-              <video ref="verifyVideo" class="face-cam-video" autoplay playsinline muted></video>
-              <canvas ref="verifyCanvas" class="face-cam-canvas"></canvas>
-
-              <!-- Loading spinner khi tải camera/model -->
-              <div v-if="isFaceModelLoading" class="cam-overlay-loading">
-                <div class="spinner-border text-primary mb-2"></div>
-                <div class="small fw-semibold text-white">Đang khởi tạo AI...</div>
-              </div>
-
-              <!-- Scanning laser bar animation khi đang quét -->
-              <div v-if="isFaceVerifying && !isFaceModelLoading && verifyResult === 'pending'" class="scan-laser-line"></div>
-
-              <!-- Biểu tượng kết quả -->
-              <div v-if="verifyResult === 'success'" class="verify-badge-result result-success">
-                <i class="fa-solid fa-circle-check"></i>
-              </div>
-              <div v-else-if="verifyResult === 'failed'" class="verify-badge-result result-failed">
-                <i class="fa-solid fa-circle-xmark"></i>
-              </div>
-            </div>
-
-            <!-- Trạng thái quét Face ID -->
-            <div class="verify-status-box mb-3">
-              <div :class="['alert py-2 px-3 mb-0 small fw-medium', verifyAlertClass]">
-                <i :class="verifyAlertIcon" class="me-2"></i>
-                <span>{{ verifyMessageText }}</span>
-              </div>
-            </div>
-
-            <!-- Các nút hành động -->
-            <div class="d-flex gap-2 justify-content-center flex-wrap">
-              <button
-                v-if="verifyResult === 'failed'"
-                class="btn btn-warning flex-grow-1 fw-bold py-2"
-                @click="retryFaceVerification"
-              >
-                <i class="fa-solid fa-rotate-right me-1"></i> Quét lại Face ID
-              </button>
-
-              <button
-                v-if="verifyResult === 'success'"
-                class="btn btn-success flex-grow-1 fw-bold py-2 shadow-sm"
-                @click="enterRoomNow"
-              >
-                <i class="fa-solid fa-door-open me-1"></i> Vào phòng học ngay
-              </button>
-
-              <button
-                class="btn btn-outline-secondary px-4 py-2"
-                @click="cancelFaceVerification"
-              >
-                Hủy bỏ
-              </button>
-            </div>
-          </div>
-        </div>
-
       </div>
     </main>
   </div>
@@ -460,14 +365,14 @@
 
 <script>
 import { lichHocService } from '../../services/lichHocService'
-import profileService from '../../services/profileService'
-import * as faceapi from 'face-api.js'
+import { calendarSession, dateParts } from '../../services/flowHelpers'
 
 export default {
   name: 'LichHocHocVien',
   data() {
     return {
       loading: false,
+      error: '',
       viewMode: 'week',
       filters: { from_date: '', to_date: '', trang_thai_buoi: '' },
       dsLichHoc: [],
@@ -480,7 +385,7 @@ export default {
       ],
       selectedSession: null,
 
-      // Face ID verification states
+      // Face verification is performed in the selected room.
       showFaceIdRequiredModal: false,
       showFaceVerifyModal: false,
       isFaceModelLoading: false,
@@ -515,23 +420,8 @@ export default {
     this.setDefaultFilters()
     this.buildWeekDays()
     this.loadData()
-    this.preloadFaceModels()
   },
   methods: {
-    async preloadFaceModels() {
-      try {
-        if (!this.isFaceModelLoaded) {
-          await Promise.all([
-            faceapi.nets.tinyFaceDetector.loadFromUri('/model'),
-            faceapi.nets.faceLandmark68Net.loadFromUri('/model'),
-            faceapi.nets.faceRecognitionNet.loadFromUri('/model')
-          ]);
-          this.isFaceModelLoaded = true;
-        }
-      } catch (e) {
-        console.warn("Preload Face ID models background notice:", e);
-      }
-    },
     // Định dạng YYYY-MM-DD an toàn theo giờ địa phương, không bị lệch timezone UTC
     formatDateYMD(d) {
       const y = d.getFullYear()
@@ -541,36 +431,7 @@ export default {
     },
 
     // Phân tích chuỗi ngày giờ từ API mà không bị lệch múi giờ (UTC -> GMT+7)
-    parseDateParts(iso) {
-      if (!iso) return null
-      const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/)
-      if (m) {
-        return {
-          year: parseInt(m[1]),
-          month: parseInt(m[2]),
-          day: parseInt(m[3]),
-          hour: parseInt(m[4]),
-          minute: parseInt(m[5]),
-          dateKey: `${m[1]}-${m[2]}-${m[3]}`,
-          timeStr: `${m[4]}:${m[5]}`,
-        }
-      }
-      const d = new Date(iso)
-      const y = d.getFullYear()
-      const mo = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      const h = String(d.getHours()).padStart(2, '0')
-      const mi = String(d.getMinutes()).padStart(2, '0')
-      return {
-        year: y,
-        month: parseInt(mo),
-        day: parseInt(day),
-        hour: parseInt(h),
-        minute: parseInt(mi),
-        dateKey: `${y}-${mo}-${day}`,
-        timeStr: `${h}:${mi}`,
-      }
-    },
+    parseDateParts(iso) { return dateParts(iso) },
 
     setDefaultFilters() {
       const now = new Date()
@@ -641,17 +502,20 @@ export default {
 
     async loadData() {
       this.loading = true
+      this.error = ''
       try {
         const res = await lichHocService.getLichHoc({
           from_date: this.filters.from_date,
           to_date: this.filters.to_date,
         })
         if (res && res.status) {
-          this.dsLichHoc = res.data || []
+          this.dsLichHoc = (res.data || []).map(calendarSession)
           this.filterByStatus()
-        }
+        } else throw new Error(res?.message || 'Không thể tải lịch học.')
       } catch (e) {
-        console.error('Lỗi tải lịch học:', e)
+        this.error = e.message || 'Không thể tải lịch học.'
+        this.dsLichHoc = []
+        this.filteredLichHoc = []
       } finally {
         this.loading = false
       }
@@ -744,15 +608,7 @@ export default {
     getSessionDates(session) {
       if (!session || !session.lop_hoc) return { start: null, end: null };
 
-      const parseToDate = (iso) => {
-        if (!iso) return null;
-        const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
-        if (m) {
-          return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]), parseInt(m[4]), parseInt(m[5]));
-        }
-        const d = new Date(iso);
-        return isNaN(d.getTime()) ? null : d;
-      };
+      const parseToDate = iso => { const date = new Date(iso); return Number.isNaN(date.getTime()) ? null : date; };
 
       return {
         start: parseToDate(session.lop_hoc.thoi_gian_bat_dau),
@@ -764,9 +620,10 @@ export default {
       if (!session) return 'expired';
 
       // 1. Nếu backend đã đánh dấu là 'da_hoc'
-      if (session.trang_thai_buoi === 'da_hoc') return 'expired';
+      if (['da_hoc','da_huy','cancelled'].includes(session.trang_thai_buoi) || ['completed','cancelled'].includes(session.trang_thai)) return 'expired';
 
       const { start, end } = this.getSessionDates(session);
+      if (!start || !end) return 'expired';
       const now = new Date();
 
       // 2. Buổi học đã qua thời gian kết thúc
@@ -792,7 +649,7 @@ export default {
         return 'in_progress';
       }
 
-      return 'in_progress';
+      return 'expired';
     },
 
     isSessionExpired(session) {
@@ -807,300 +664,11 @@ export default {
       return this.getSessionTimingStatus(session) === 'in_progress';
     },
 
-    // ===== FACE ID & VÀO PHÒNG HỌC =====
-    async onJoinRoomClick(session) {
-      if (!session || this.isSessionExpired(session) || this.isSessionNotStarted(session)) {
-        return;
-      }
-
-      this.targetRoomSession = session;
-
-      // 1. Kiểm tra tài khoản người dùng
-      const userStr = localStorage.getItem("user") || localStorage.getItem("edulink_user");
-      let user = null;
-      try {
-        user = userStr ? JSON.parse(userStr) : null;
-      } catch (e) {}
-
-      // Nếu chưa có user hoặc chưa có dữ liệu Face ID trong localStorage, thử fetch từ CSDL
-      if (!user?.du_lieu_khuon_mat) {
-        try {
-          const res = await profileService.getProfile('hoc_vien');
-          const u = res?.data || res;
-          if (u && (u.du_lieu_khuon_mat || u.face_id_photo_path)) {
-            user = { ...user, ...u };
-            localStorage.setItem("user", JSON.stringify(user));
-            localStorage.setItem("edulink_user", JSON.stringify(user));
-          }
-        } catch (err) {}
-      }
-
-      // TRƯỜNG HỢP 1: Tài khoản chưa kích hoạt / chưa có Face ID
-      if (!user || (!user.du_lieu_khuon_mat && !user.face_id_photo_path)) {
-        this.showFaceIdRequiredModal = true;
-        return;
-      }
-
-      // TRƯỜNG HỢP 2: Đã có Face ID -> Mở modal quét Face ID tự động
-      this.showFaceVerifyModal = true;
-      this.verifyResult = 'pending';
-      this.verifyMessageText = 'Đang khởi động Camera và trí tuệ nhân tạo...';
-      this.$nextTick(() => {
-        this.startFaceVerification(user);
-      });
-    },
-
-    goToFaceIdSetup() {
-      this.showFaceIdRequiredModal = false;
-      this.selectedSession = null;
-      this.$router.push('/client/profile#faceid');
-    },
-
-    async startFaceVerification(user) {
-      this.isFaceVerifying = true;
-      this.verifyResult = 'pending';
-      this.isFaceModelLoading = !this.isFaceModelLoaded;
-      this.verifyMessageText = this.isFaceModelLoaded ? 'Đang kết nối camera...' : 'Đang tải mô hình nhận diện khuôn mặt...';
-
-      try {
-        if (!this.isFaceModelLoaded) {
-          await Promise.all([
-            faceapi.nets.tinyFaceDetector.loadFromUri('/model'),
-            faceapi.nets.faceLandmark68Net.loadFromUri('/model'),
-            faceapi.nets.faceRecognitionNet.loadFromUri('/model')
-          ]);
-          this.isFaceModelLoaded = true;
-        }
-
-        this.verifyStream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 320, height: 320, facingMode: 'user' }
-        });
-
-        this.isFaceModelLoading = false;
-        this.verifyMessageText = 'Đang quét khuôn mặt, vui lòng nhìn thẳng vào camera...';
-
-        this.$nextTick(() => {
-          const video = this.$refs.verifyVideo;
-          if (video) {
-            video.srcObject = this.verifyStream;
-            video.onloadedmetadata = () => {
-              video.play().then(() => {
-                this.runVerificationLoop(user);
-              }).catch(() => {
-                this.runVerificationLoop(user);
-              });
-            };
-          }
-        });
-
-        // Hạn thời gian an toàn: Tự động đối soát và vào phòng nếu camera hoạt động bình thường
-        if (this.autoVerifySafetyTimer) {
-          clearTimeout(this.autoVerifySafetyTimer);
-        }
-        this.autoVerifySafetyTimer = setTimeout(() => {
-          if (this.isFaceVerifying && this.verifyResult === 'pending') {
-            this.handleVerificationSuccess(96);
-          }
-        }, 2800);
-
-      } catch (err) {
-        console.error("Lỗi camera khi xác thực Face ID:", err);
-        this.isFaceModelLoading = false;
-        this.verifyResult = 'failed';
-        this.verifyMessageText = 'Không thể truy cập camera. Vui lòng cấp quyền Camera trên trình duyệt!';
-      }
-    },
-
-    runVerificationLoop(user) {
-      if (this.verifyInterval) {
-        clearInterval(this.verifyInterval);
-        this.verifyInterval = null;
-      }
-
-      const video = this.$refs.verifyVideo;
-      const canvas = this.$refs.verifyCanvas;
-      if (!video) return;
-
-      const displaySize = { width: 260, height: 260 };
-      if (canvas) {
-        canvas.width = displaySize.width;
-        canvas.height = displaySize.height;
-        faceapi.matchDimensions(canvas, displaySize);
-      }
-
-      let savedVector = null;
-      try {
-        let raw = user?.du_lieu_khuon_mat;
-        while (typeof raw === 'string') {
-          try {
-            raw = JSON.parse(raw);
-          } catch (e) {
-            break;
-          }
-        }
-        if (Array.isArray(raw) && raw.length > 0) {
-          savedVector = new Float32Array(raw);
-        } else if (raw && typeof raw === 'object') {
-          const vals = Object.values(raw);
-          if (vals.length >= 128) {
-            savedVector = new Float32Array(vals);
-          }
-        }
-      } catch (e) {
-        console.warn("Lỗi trích xuất vector sinh trắc học:", e);
-      }
-
-      let matchCount = 0;
-      let attemptCount = 0;
-
-      this.verifyInterval = setInterval(async () => {
-        if (!this.isFaceVerifying || !video || video.paused || video.ended) return;
-        if (!video.videoWidth || video.videoWidth === 0) return;
-
-        attemptCount++;
-
-        try {
-          const detections = await faceapi
-            .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.2 }))
-            .withFaceLandmarks()
-            .withFaceDescriptors();
-
-          if (canvas) {
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (detections && detections.length > 0) {
-              const resized = faceapi.resizeResults(detections, displaySize);
-              faceapi.draw.drawDetections(canvas, resized);
-            }
-          }
-
-          if (detections && detections.length > 0) {
-            const currentDescriptor = detections[0].descriptor;
-
-            let isMatched = false;
-            let similarityPercent = 95;
-
-            if (savedVector && savedVector.length === 128) {
-              const distance = faceapi.euclideanDistance(currentDescriptor, savedVector);
-              similarityPercent = Math.round(Math.max(0, Math.min(100, (1 - distance / 0.85) * 100)));
-              // Khoảng cách < 0.75 hoặc khi đã bắt được khuôn mặt liên tục
-              if (distance < 0.75 || matchCount >= 1) {
-                isMatched = true;
-              }
-            } else {
-              isMatched = true;
-            }
-
-            if (isMatched) {
-              matchCount++;
-              this.verifyMessageText = `Đang xác thực khuôn mặt... Khớp ${similarityPercent}%`;
-
-              if (matchCount >= 1) {
-                this.handleVerificationSuccess(similarityPercent);
-                return;
-              }
-            } else {
-              this.verifyMessageText = `Đang phân tích khuôn mặt... Vui lòng nhìn thẳng vào giữa camera`;
-            }
-          } else {
-            this.verifyMessageText = 'Vui lòng nhìn thẳng vào camera để đối soát khuôn mặt...';
-          }
-
-          // Tự động hoàn tất sau 12 lần lặp (~2s) khi camera đang truyền hình ảnh hợp lệ
-          if (attemptCount >= 12) {
-            this.handleVerificationSuccess(96);
-          }
-        } catch (e) {
-          console.warn("Lỗi phân tích khuôn mặt:", e);
-          if (attemptCount >= 8) {
-            this.handleVerificationSuccess(95);
-          }
-        }
-      }, 160);
-    },
-
-    handleVerificationSuccess(similarityPercent = 96) {
-      if (this.verifyResult === 'success') return;
-
-      if (this.verifyInterval) {
-        clearInterval(this.verifyInterval);
-        this.verifyInterval = null;
-      }
-      if (this.autoVerifySafetyTimer) {
-        clearTimeout(this.autoVerifySafetyTimer);
-        this.autoVerifySafetyTimer = null;
-      }
-
-      this.verifyResult = 'success';
-      this.verifyMessageText = `Xác thực Face ID chính xác! (Khớp ${similarityPercent}%). Đang vào phòng học...`;
-      this.stopFaceCamera();
-
-      const roomId = this.getRoomCode(this.targetRoomSession);
-      sessionStorage.setItem('face_verified_' + roomId, 'true');
-
-      // Tự động chuyển phòng sau 350ms để người dùng thấy xác thực thành công
-      setTimeout(() => {
-        this.enterRoomNow();
-      }, 350);
-    },
-
-    retryFaceVerification() {
-      const userStr = localStorage.getItem("user") || localStorage.getItem("edulink_user");
-      const user = userStr ? JSON.parse(userStr) : null;
-      if (user) {
-        this.startFaceVerification(user);
-      }
-    },
-
-    getRoomCode(session) {
-      if (!session) return 'PH-01';
-      // 1. Kiểm tra link_online nếu có dạng /phong-hoc/XXX-XXX-XXX
-      const link = session.lop_hoc?.link_online || '';
-      if (link.includes('/phong-hoc/')) {
-        const parts = link.split('/phong-hoc/');
-        if (parts[1]) return parts[1].trim();
-      }
-      // 2. Kiểm tra quan hệ phong_hop
-      if (session.lop_hoc?.phong_hop?.ma_phong) {
-        return session.lop_hoc.phong_hop.ma_phong;
-      }
-      // 3. Fallback mã lớp / phòng
-      return session.lop_hoc?.phong_hoc?.so_phong || `PH-${session.lop_hoc_id || session.id || '01'}`;
-    },
-
-    enterRoomNow() {
-      this.cancelFaceVerification();
-      const session = this.targetRoomSession;
-      this.selectedSession = null;
-      const roomId = this.getRoomCode(session);
-      this.$router.push(`/phong-hoc/${encodeURIComponent(roomId)}`);
-    },
-
-    stopFaceCamera() {
-      if (this.verifyInterval) {
-        clearInterval(this.verifyInterval);
-        this.verifyInterval = null;
-      }
-      if (this.autoVerifySafetyTimer) {
-        clearTimeout(this.autoVerifySafetyTimer);
-        this.autoVerifySafetyTimer = null;
-      }
-      if (this.verifyStream) {
-        this.verifyStream.getTracks().forEach(t => t.stop());
-        this.verifyStream = null;
-      }
-    },
-
-    cancelFaceVerification() {
-      this.stopFaceCamera();
-      this.showFaceVerifyModal = false;
-      this.isFaceVerifying = false;
-      this.verifyResult = 'pending';
-      this.verifyMessageText = '';
+    // The room requests a new actor-bound Face ID proof for this dated session.
+    onJoinRoomClick(session) {
+      if (!session?.id_buoi_hoc || !this.canJoinSession(session)) return;
+      this.$router.push({ name: 'phong-hoc', params: { id: session.id_buoi_hoc }, query: { session: session.id_buoi_hoc } });
     }
-  },
-  beforeUnmount() {
-    this.stopFaceCamera();
   }
 }
 </script>
