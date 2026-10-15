@@ -1,211 +1,59 @@
 <template>
-    <div class="vh-100 d-flex flex-column bg-dark" style="background-color: #0f172a !important;">
-        <header class="p-3 d-flex justify-content-between align-items-center position-absolute w-100 top-0 z-3"
-            style="background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);">
-            <div class="d-flex align-items-center gap-2">
-                <div class="bg-success rounded-circle" style="width: 10px; height: 10px; box-shadow: 0 0 10px #22c55e;">
-                </div>
-                <h6 class="mb-0 text-white fw-bold text-shadow">{{ tenPhongHoc ? tenPhongHoc + ' (' + roomId + ')' : 'Phòng học: ' + roomId }}</h6>
-            </div>
-            <div
-                class="text-white bg-dark bg-opacity-50 px-3 py-1 rounded-pill border border-secondary small fw-medium backdrop-blur">
-                <i class='bx bx-time-five me-1'></i> Đang diễn ra
-            </div>
-        </header>
+  <div class="lesson-room">
+    <header class="lesson-header">
+      <div class="lesson-heading"><h1>{{ tenPhongHoc || 'Buổi học ' + sessionId }}</h1><p>{{ currentUserName }} <span class="lesson-role" :class="currentUserRole">{{ currentUserRole === 'giao_vien' ? 'Bạn là giáo viên' : currentUserRole === 'hoc_vien' ? 'Bạn là học viên' : 'Tài khoản tham gia' }}</span></p></div>
+      <div class="lesson-status"><span :class="['lesson-connection', { 'is-connected': state === 'connected' }]" role="status">{{ connectionLabel }}</span><span v-if="state === 'connected'">{{ participants.length }} người trong phòng</span></div>
+    </header>
 
-        <div id="remote-audio" hidden></div>
-        <div v-if="state === 'verification' || state === 'failed'" class="position-absolute top-50 start-50 translate-middle z-3" style="width:340px;max-width:95vw;">
-          <FaceProof v-if="sessionId" purpose="room" :target="{ id_buoi_hoc: sessionId }" @verified="connect" @cancel="roiPhong" />
-          <p v-else class="alert alert-danger">Chưa chọn buổi học. Hãy quay lại lịch học để chọn buổi.</p>
-        </div>
-        <div v-if="error || mediaError" class="alert alert-warning position-absolute top-0 start-50 translate-middle-x mt-5 z-3" role="alert">{{ error }} {{ mediaError }}</div>
-        <button v-if="audioPlaybackBlocked && state === 'connected'" class="btn btn-warning position-absolute top-0 end-0 mt-5 z-3" @click="startAudio">Bật âm thanh phòng học</button>
-        <main class="flex-grow-1 position-relative p-2 p-md-4 mt-5 d-flex flex-column">
-            <div id="video-grid" class="video-grid w-100 flex-grow-1"
-                :style="{ paddingRight: isChatOpen ? '350px' : '0', transition: 'padding 0.3s ease' }">
-                <div id="local-video-wrapper" class="video-wrapper shadow-lg">
-                    <div class="w-100 h-100 bg-secondary position-relative">
-                        <div v-if="state === 'connecting'" class="position-absolute top-50 start-50 translate-middle z-3">
-                            <span class="spinner-border text-light"></span>
-                        </div>
+    <p v-if="error || mediaError" class="lesson-notice" role="alert">{{ error }} {{ mediaError }}</p>
+    <button v-if="audioPlaybackBlocked && state === 'connected'" class="lesson-audio-notice" @click="startAudio">Bật âm thanh phòng học</button>
+    <div id="remote-audio" hidden></div>
 
-                        <div id="local-video" class="w-100 h-100 position-absolute top-0 start-0"></div>
-                    </div>
+    <main class="lesson-stage" :class="{ 'has-sidebar': isChatOpen || isParticipantsOpen }">
+      <section v-if="needsVerification" class="lesson-lobby" aria-label="Xác thực trước khi vào lớp">
+        <div class="lesson-lobby-intro"><span class="lesson-step">Trước khi vào lớp</span><h2>Xác thực khuôn mặt của bạn</h2><p>Bạn chưa vào phòng. Quét Face ID để xác thực, sau đó hệ thống mới kết nối buổi học.</p></div>
+        <FaceProof v-if="sessionId" purpose="room" :target="{ id_buoi_hoc: sessionId }" @verified="connect" @cancel="roiPhong" />
+        <p v-else role="alert">Chưa chọn buổi học. Hãy quay lại lịch học để chọn buổi.</p>
+      </section>
+      <div v-else-if="state === 'connecting'" class="lesson-connecting" role="status"><span class="spinner-border" aria-hidden="true"></span><h2>Đang kết nối buổi học</h2><p>Face ID đã được tiếp nhận. Chờ máy chủ xác nhận kết nối phòng.</p></div>
+      <div v-else class="lesson-grid">
+        <article v-for="share in screenShares" :key="share.key" class="lesson-share"><div :id="'lesson-share-' + share.key" class="lesson-video-host"></div><p>{{ share.name }} đang chia sẻ màn hình</p></article>
+        <article v-for="participant in participants" :key="participant.identity" class="lesson-person" :class="participant.role" :aria-label="'Ô người tham gia: ' + participant.name + ' — ' + participant.roleLabel">
+          <div :id="'lesson-camera-' + participant.sid" class="lesson-video-host"></div>
+          <div v-if="!participant.videoEnabled" class="lesson-camera-off"><span class="lesson-initials">{{ getParticipantInitial(participant) }}</span><h2>{{ participant.name }}</h2><span class="lesson-role" :class="participant.role">{{ participant.roleLabel }}{{ participant.isLocal ? ' · Bạn' : '' }}</span><p><i class="bx bx-video-off" aria-hidden="true"></i> {{ participant.cameraEnabled ? 'Đang nhận hình ảnh…' : 'Camera đang tắt' }}</p></div>
+          <div class="lesson-nameplate"><div><strong>{{ participant.name }}</strong><span>{{ participant.roleLabel }}{{ participant.isLocal ? ' · Bạn' : '' }}</span></div><i :class="participant.audioEnabled ? 'bx bx-microphone' : 'bx bx-microphone-off is-muted'" :title="participant.audioEnabled ? 'Micro đang bật' : 'Micro đang tắt'"></i></div>
+        </article>
+        <p v-if="!participants.length" class="lesson-empty">Chưa có kết nối với người tham gia nào.</p>
+      </div>
+    </main>
 
-                    <div class="user-label">
-                        <i class='bx bx-user-circle'></i> {{ currentUserName || 'Bạn' }}
-                        <i v-if="!isMicOn" class='bx bx-microphone-off text-danger ms-2' title="Mic đang tắt"></i>
-                        <i v-else class='bx bx-microphone text-success ms-2' title="Mic đang bật"></i>
-                    </div>
-                </div>
-            </div>
-        </main>
+    <footer class="lesson-footer">
+      <div class="lesson-toolbar">
+        <button @click="toggleMic" :disabled="!canUseRoom" :class="{ 'is-off': !isMicOn }" :aria-label="isMicOn ? 'Tắt Micro' : 'Bật Micro'" :title="isMicOn ? 'Tắt Micro' : 'Bật Micro'"><i :class="isMicOn ? 'bx bx-microphone' : 'bx bx-microphone-off'" aria-hidden="true"></i></button>
+        <button @click="toggleCamera" :disabled="!canUseRoom" :class="{ 'is-off': !isCameraOn }" :aria-label="isCameraOn ? 'Tắt Camera' : 'Bật Camera'" :title="isCameraOn ? 'Tắt Camera' : 'Bật Camera'"><i :class="isCameraOn ? 'bx bx-video' : 'bx bx-video-off'" aria-hidden="true"></i></button>
+        <button @click="toggleScreenShare" :disabled="!canUseRoom" :class="{ 'is-active': isSharingScreen }" :aria-label="isSharingScreen ? 'Dừng chia sẻ màn hình' : 'Chia sẻ màn hình'" title="Chia sẻ màn hình"><i class="bx bx-desktop" aria-hidden="true"></i></button>
+        <button @click="openSettings" :disabled="!canUseRoom" aria-label="Cài đặt thiết bị" title="Cài đặt thiết bị"><i class="bx bx-slider-alt" aria-hidden="true"></i></button>
+        <button @click="toggleChat" :disabled="!canUseRoom" :class="{ 'is-active': isChatOpen }" aria-label="Mở Chat" title="Mở Chat"><i class="bx bx-message-rounded-dots" aria-hidden="true"></i></button>
+        <button @click="toggleParticipants" :disabled="!canUseRoom" :class="{ 'is-active': isParticipantsOpen }" aria-label="Danh sách người tham gia" title="Danh sách người tham gia"><i class="bx bx-group" aria-hidden="true"></i><span v-if="canUseRoom">{{ participants.length }}</span></button>
+        <button @click="roiPhong" class="lesson-leave"><i class="bx bx-phone-off" aria-hidden="true"></i><span>{{ canUseRoom ? 'Rời phòng' : 'Quay lại' }}</span></button>
+      </div>
+    </footer>
 
-        <footer class="position-absolute bottom-0 w-100 mb-4 d-flex justify-content-center z-3">
-            <div
-                class="bg-dark bg-opacity-75 backdrop-blur px-4 py-3 rounded-pill shadow-lg border border-secondary d-flex gap-3 align-items-center">
+    <aside v-if="isChatOpen" class="lesson-sidebar" aria-label="Chat trong phòng học">
+      <header><h2>Trò chuyện trong phòng</h2><button @click="toggleChat" aria-label="Đóng chat">×</button></header>
+      <div ref="chatBox" class="lesson-messages" role="log" aria-live="polite"><div v-for="(msg, index) in chatMessages" :key="index" class="lesson-message" :class="{ 'is-own': msg.isLocal }"><span>{{ msg.sender }} · {{ msg.timestamp }}</span><p>{{ msg.text }}</p></div><p v-if="!chatMessages.length" class="lesson-sidebar-empty">Gửi tin nhắn cho những người đang ở cùng phòng.</p></div>
+      <form @submit.prevent="sendChatMessage" class="lesson-compose"><label for="lesson-message" class="visually-hidden">Tin nhắn trong phòng</label><input id="lesson-message" v-model="newMessage" placeholder="Nhập tin nhắn…" maxlength="2000" autocomplete="off" /><button :disabled="!newMessage.trim() || sending || !canUseRoom">{{ sending ? 'Đang gửi…' : 'Gửi' }}</button></form>
+    </aside>
 
-                <button @click="toggleMic"
-                    :class="['btn rounded-circle tool-btn shadow-sm', isMicOn ? 'btn-light' : 'btn-danger']"
-                    :title="isMicOn ? 'Tắt Micro' : 'Bật Micro'">
-                    <i :class="['fs-4', isMicOn ? 'bx bx-microphone' : 'bx bxs-microphone-off']"></i>
-                </button>
+    <aside v-if="isParticipantsOpen" class="lesson-sidebar" aria-label="Người đang kết nối">
+      <header><h2>Người đang kết nối ({{ participants.length }})</h2><button @click="toggleParticipants" aria-label="Đóng danh sách">×</button></header>
+      <div class="lesson-participant-list"><div v-for="participant in participants" :key="participant.identity" class="lesson-participant-row"><span class="lesson-list-initials">{{ getParticipantInitial(participant) }}</span><div><strong>{{ participant.name }}</strong><p>{{ participant.roleLabel }}{{ participant.isLocal ? ' · Bạn' : '' }}</p></div><i :class="participant.audioEnabled ? 'bx bx-microphone' : 'bx bx-microphone-off is-muted'"></i></div><p v-if="!participants.length" class="lesson-sidebar-empty">Chưa có người tham gia kết nối.</p></div>
+    </aside>
 
-                <button @click="toggleCamera"
-                    :class="['btn rounded-circle tool-btn shadow-sm', isCameraOn ? 'btn-light' : 'btn-danger']"
-                    :title="isCameraOn ? 'Tắt Camera' : 'Bật Camera'">
-                    <i :class="['fs-4', isCameraOn ? 'bx bx-video' : 'bx bx-video-off']"></i>
-                </button>
-
-                <button @click="toggleScreenShare"
-                    :class="['btn rounded-circle tool-btn shadow-sm', isSharingScreen ? 'btn-primary' : 'btn-light']"
-                    :title="isSharingScreen ? 'Dừng chia sẻ màn hình' : 'Chia sẻ màn hình'">
-                    <i :class="['fs-4', isSharingScreen ? 'bx bx-stop-circle' : 'bx bx-desktop']"></i>
-                </button>
-
-                <button @click="openSettings" class="btn btn-secondary rounded-circle tool-btn shadow-sm"
-                    title="Cài đặt Âm thanh">
-                    <i class='bx bx-slider-alt fs-4'></i>
-                </button>
-
-                <button @click="toggleChat"
-                    :class="['btn rounded-circle tool-btn shadow-sm', isChatOpen ? 'btn-primary text-white' : 'btn-light']"
-                    title="Mở Chat">
-                    <i class='bx bx-message-rounded-dots fs-4'></i>
-                </button>
-
-                <button @click="toggleParticipants"
-                    :class="['btn rounded-circle tool-btn shadow-sm', isParticipantsOpen ? 'btn-primary text-white' : 'btn-light']"
-                    title="Danh sách người tham gia">
-                    <i class='bx bx-group fs-4'></i>
-                </button>
-
-                <div class="vr bg-secondary mx-2"></div>
-
-                <button @click="roiPhong"
-                    class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm d-flex align-items-center gap-2"
-                    style="height: 50px;" title="Rời khỏi phòng học">
-                    <i class='bx bx-phone-off fs-5'></i> Rời đi
-                </button>
-            </div>
-        </footer>
-
-        <div v-if="showSettings" class="modal-overlay d-flex justify-content-center align-items-center"
-            style="z-index: 9999;">
-            <div class="bg-dark border border-secondary rounded-4 p-4 shadow-lg text-white"
-                style="width: 400px; max-width: 90%;">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h5 class="mb-0 fw-bold"><i class='bx bx-cog text-primary me-2'></i> Cài đặt thiết bị</h5>
-                    <button @click="showSettings = false" class="btn-close btn-close-white"></button>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label text-secondary small fw-bold">CHỌN MICRO (ĐẦU VÀO)</label>
-                    <select class="form-select bg-dark text-white border-secondary" v-model="selectedMic"
-                        @change="switchDevice('audioinput', selectedMic)">
-                        <option v-for="device in audioInputs" :key="device.deviceId" :value="device.deviceId">
-                            {{ device.label || 'Micro mặc định' }}
-                        </option>
-                    </select>
-                </div>
-
-                <div class="mb-4">
-                    <label class="form-label text-secondary small fw-bold">CHỌN LOA (ĐẦU RA)</label>
-                    <select class="form-select bg-dark text-white border-secondary" v-model="selectedSpeaker"
-                        @change="switchDevice('audiooutput', selectedSpeaker)">
-                        <option v-for="device in audioOutputs" :key="device.deviceId" :value="device.deviceId">
-                            {{ device.label || 'Loa mặc định' }}
-                        </option>
-                    </select>
-                </div>
-
-                <button @click="showSettings = false" class="btn btn-primary w-100 rounded-pill fw-bold">Hoàn
-                    tất</button>
-            </div>
-        </div>
-
-        <!-- Chat Sidebar -->
-        <aside v-if="isChatOpen" class="bg-dark border-start border-secondary d-flex flex-column z-3"
-            style="width: 350px; position: absolute; right: 0; top: 0; bottom: 0; box-shadow: -5px 0 15px rgba(0,0,0,0.5);">
-            <div
-                class="p-3 border-bottom border-secondary d-flex justify-content-between align-items-center bg-dark text-white">
-                <h6 class="mb-0 fw-bold"><i class='bx bx-message-rounded-dots me-2'></i> Trò chuyện trong phòng</h6>
-                <button @click="toggleChat" class="btn-close btn-close-white"></button>
-            </div>
-
-            <div class="flex-grow-1 overflow-auto p-3 d-flex flex-column gap-3" ref="chatBox">
-                <div v-for="(msg, index) in chatMessages" :key="index"
-                    :class="['d-flex flex-column', msg.isLocal ? 'align-items-end' : 'align-items-start']">
-                    <span class="small text-secondary mb-1">{{ msg.sender }} <span style="font-size: 0.7rem;">{{
-                        msg.timestamp }}</span></span>
-                    <div :class="['px-3 py-2 rounded-4 text-white', msg.isLocal ? 'bg-primary' : 'bg-secondary']"
-                        style="max-width: 85%; word-wrap: break-word;">
-                        {{ msg.text }}
-                    </div>
-                </div>
-            </div>
-
-            <div class="p-3 border-top border-secondary">
-                <form @submit.prevent="sendChatMessage" class="d-flex gap-2">
-                    <input type="text" v-model="newMessage"
-                        class="form-control bg-dark text-white border-secondary rounded-pill"
-                        placeholder="Nhập tin nhắn..." autocomplete="off">
-                    <button type="submit"
-                        class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center"
-                        style="width: 40px; height: 40px; flex-shrink: 0;" :disabled="!newMessage.trim() || sending || state !== 'connected'">
-                        <i class='bx bx-send'></i>
-                    </button>
-                </form>
-            </div>
-        </aside>
-
-        <!-- Participants Sidebar -->
-        <aside v-if="isParticipantsOpen" class="bg-dark border-start border-secondary d-flex flex-column z-3"
-            style="width: 350px; position: absolute; right: 0; top: 0; bottom: 0; box-shadow: -5px 0 15px rgba(0,0,0,0.5);">
-            <div
-                class="p-3 border-bottom border-secondary d-flex justify-content-between align-items-center bg-dark text-white">
-                <h6 class="mb-0 fw-bold text-white"><i class='bx bx-group me-2'></i> Danh sách người tham gia</h6>
-                <button @click="toggleParticipants" class="btn-close btn-close-white"></button>
-            </div>
-
-            <div
-                class="p-3 border-bottom border-secondary text-white small d-flex justify-content-between align-items-center">
-                <span>Tổng số người tham gia</span>
-                <span class="badge bg-primary rounded-pill">{{ participants.length }}</span>
-            </div>
-
-            <div class="flex-grow-1 overflow-auto p-3 d-flex flex-column gap-2">
-                <div v-for="participant in participants" :key="participant.sid"
-                    class="participant-item d-flex align-items-center justify-content-between gap-3 p-3 rounded-4 border border-secondary bg-black bg-opacity-25">
-                    <div class="d-flex align-items-center gap-3">
-                        <div
-                            class="participant-avatar rounded-circle d-flex align-items-center justify-content-center bg-secondary text-white fw-bold">
-                            {{ getParticipantInitial(participant) }}
-                        </div>
-                        <div>
-                            <div class="text-white fw-semibold">{{ participant.name }}</div>
-                            <div class="small text-secondary">
-                                <i v-if="participant.isLocal" class='bx bx-user-check me-1'></i>
-                                <span v-if="participant.isLocal">Bạn</span>
-                                <span v-else>Thành viên trong phòng</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <i :class="participant.audioEnabled ? 'bx bx-microphone text-success' : 'bx bx-microphone-off text-danger'"
-                            :title="participant.audioEnabled ? 'Mic đang bật' : 'Mic đang tắt'"></i>
-                        <i :class="participant.videoEnabled ? 'bx bx-video text-success' : 'bx bx-video-off text-danger'"
-                            :title="participant.videoEnabled ? 'Camera đang bật' : 'Camera đang tắt'"></i>
-                    </div>
-                </div>
-
-                <div v-if="participants.length === 0" class="text-center text-secondary py-5">
-                    <i class='bx bx-group fs-1 mb-2 d-block'></i>
-                    Chưa có người tham gia nào.
-                </div>
-            </div>
-        </aside>
+    <div v-if="showSettings" class="lesson-settings-overlay" @click.self="showSettings = false">
+      <section class="lesson-settings" role="dialog" aria-modal="true" aria-labelledby="lesson-settings-title"><header><h2 id="lesson-settings-title">Cài đặt thiết bị</h2><button @click="showSettings = false" aria-label="Đóng cài đặt">×</button></header><label>Micro<select v-model="selectedMic" @change="switchDevice('audioinput', selectedMic)"><option v-for="device in audioInputs" :key="device.deviceId" :value="device.deviceId">{{ device.label || 'Micro mặc định' }}</option></select></label><label>Loa<select v-model="selectedSpeaker" @change="switchDevice('audiooutput', selectedSpeaker)"><option v-for="device in audioOutputs" :key="device.deviceId" :value="device.deviceId">{{ device.label || 'Loa mặc định' }}</option></select></label><button class="lesson-settings-done" @click="showSettings = false">Hoàn tất</button></section>
     </div>
+  </div>
 </template>
 
 <script>
@@ -214,328 +62,257 @@ import FaceProof from './FaceProof.vue';
 import product from '../../services/productService';
 import http from '../../services/http';
 import { accepted } from '../../services/productContract';
-import { attachTrack, disposeRoom, sendRoomMessage } from '../../services/flowHelpers';
+import { attachTrack, sendRoomMessage } from '../../services/flowHelpers';
 
 export default {
   name: 'PhongHopVideo',
   components: { FaceProof },
   data() {
+    let account = null;
+    try { account = JSON.parse(localStorage.getItem('user') || localStorage.getItem('edulink_user') || 'null'); } catch { /* The lobby can still identify the role without a cached profile. */ }
+    const currentUserRole = localStorage.getItem('role') || '';
     return {
       roomId: this.$route.params.id, sessionId: Number(this.$route.query.session || this.$route.params.id),
       tenPhongHoc: '', phongHopId: null, room: null, sdk: null,
-      state: 'verification', error: '', mediaError: '', disposed: false, joined: false, leaving: false,
-      cameraReady: false, isMicOn: false, isCameraOn: false, isSharingScreen: false,
-      audioPlaybackBlocked: false,
-      currentUserName: '', showSettings: false, audioInputs: [], audioOutputs: [], selectedMic: '', selectedSpeaker: '',
+      state: 'verification', error: '', mediaError: '', disposed: false, joined: false, leaving: false, leavePromise: null,
+      cameraReady: false, isMicOn: false, isCameraOn: false, isSharingScreen: false, audioPlaybackBlocked: false,
+      currentUserRole, currentUserName: account?.ho_ten || account?.name || (currentUserRole === 'giao_vien' ? 'Tài khoản giáo viên' : 'Tài khoản học viên'),
+      showSettings: false, audioInputs: [], audioOutputs: [], selectedMic: '', selectedSpeaker: '',
       isChatOpen: false, chatMessages: [], newMessage: '', sending: false,
-      isParticipantsOpen: false, participants: [], attachments: [],
+      isParticipantsOpen: false, participants: [], screenShares: [], mediaAttachments: markRaw(new Map()),
     };
   },
   computed: {
-    connectionLabel() { return { verification: 'Chờ xác thực Face ID', connecting: 'Đang kết nối', connected: 'Đã kết nối phòng học', reconnecting: 'Đang kết nối lại', disconnected: 'Đã ngắt kết nối', failed: 'Kết nối thất bại' }[this.state]; }
+    connectionLabel() { return { verification: 'Chờ xác thực Face ID', connecting: 'Đang kết nối', connected: 'Đã kết nối phòng học', reconnecting: 'Đang kết nối lại', disconnected: 'Đã ngắt kết nối', failed: 'Kết nối thất bại' }[this.state] || 'Chưa kết nối'; },
+    needsVerification() { return ['verification', 'failed', 'disconnected'].includes(this.state); },
+    canUseRoom() { return this.state === 'connected'; },
   },
   beforeUnmount() { this.cleanup(); },
   methods: {
+    roleLabel(role) { return { hoc_vien: 'Học viên', giao_vien: 'Giáo viên' }[role] || 'Thành viên'; },
+    roleFromIdentity(identity) { const role = String(identity || '').split(':')[0]; return ['hoc_vien', 'giao_vien'].includes(role) ? role : ''; },
+    bindRoomEvents(room) {
+      const { RoomEvent } = this.sdk;
+      for (const event of [RoomEvent.ParticipantConnected, RoomEvent.ParticipantDisconnected, RoomEvent.TrackPublished, RoomEvent.TrackUnpublished, RoomEvent.TrackSubscribed, RoomEvent.TrackUnsubscribed, RoomEvent.LocalTrackPublished, RoomEvent.LocalTrackUnpublished, RoomEvent.TrackMuted, RoomEvent.TrackUnmuted, RoomEvent.ParticipantNameChanged]) {
+        room.on(event, () => { queueMicrotask(() => { if (!this.disposed && this.room === room) this.syncParticipants(); }); });
+      }
+      room.on(RoomEvent.Reconnecting, () => { if (!this.disposed) this.state = 'reconnecting'; });
+      room.on(RoomEvent.Reconnected, () => { if (!this.disposed) { this.state = 'connected'; this.syncParticipants(); } });
+      room.on(RoomEvent.AudioPlaybackStatusChanged, () => { if (!this.disposed) this.audioPlaybackBlocked = !room.canPlaybackAudio; });
+      room.on(RoomEvent.Disconnected, () => {
+        if (this.disposed) return;
+        this.state = 'disconnected'; this.isMicOn = false; this.isCameraOn = false; this.cameraReady = false;
+        this.participants = []; this.screenShares = []; this.clearMedia(); this.leaveAttendance();
+      });
+      room.on(RoomEvent.DataReceived, (payload, participant, kind, topic) => {
+        if (!participant || topic !== 'class-chat' || this.disposed) return;
+        try {
+          const message = JSON.parse(new TextDecoder().decode(payload));
+          if (typeof message.text !== 'string' || !message.text.trim() || message.text.length > 2000) return;
+          this.chatMessages.push({ text: message.text, sender: participant.name || this.roleLabel(this.roleFromIdentity(participant.identity)), timestamp: new Date().toLocaleTimeString('vi-VN'), isLocal: false, status: 'received' });
+          this.scrollChatToBottom();
+        } catch { /* Ignore payloads outside the room-chat contract. */ }
+      });
+    },
     async connect(proof) {
-      if (this.state === 'connecting' || this.state === 'connected' || !proof?.verification_id) return;
-      this.error = ''; this.state = 'connecting';
+      if (this.disposed || this.state === 'connecting' || this.state === 'connected' || !proof?.verification_id) return;
+      this.error = ''; this.mediaError = ''; this.state = 'connecting';
       try {
+        if (this.room) { await this.room.disconnect(); this.room = null; this.clearMedia(); }
+        this.state = 'connecting';
+        await this.leaveAttendance();
+        if (this.disposed) return;
+        if (this.joined) throw new Error('Chưa ghi nhận được lần rời phòng trước. Hãy thử lại trước khi vào lại lớp.');
         const result = await product.roomToken(this.sessionId, proof.verification_id);
         if (this.disposed) return;
         const data = result.data;
         if (!data?.token || !data?.server_url) throw new Error('Máy chủ chưa cấp thông tin kết nối phòng học.');
-        this.roomId = data.ma_phong; this.phongHopId = data.id_phong_hop;
-        this.sdk = markRaw(await import('livekit-client'));
+        this.roomId = data.ma_phong; this.phongHopId = data.id_phong_hop; this.tenPhongHoc = data.ten_phong || '';
+        this.sdk = markRaw({ ...(await import('livekit-client')) });
         if (this.disposed) return;
-        const { Room, RoomEvent } = this.sdk;
-        const room = markRaw(new Room({ adaptiveStream: true, dynacast: true }));
-        this.room = room;
-        room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => this.attachRemote(track, participant));
-        room.on(RoomEvent.TrackUnsubscribed, track => track.detach().forEach(node => node.remove()));
-        room.on(RoomEvent.ParticipantConnected, () => this.syncParticipants());
-        room.on(RoomEvent.ParticipantDisconnected, participant => {
-          document.querySelectorAll(`[data-participant="${CSS.escape(participant.sid)}"]`).forEach(node => node.remove());
-          this.syncParticipants();
-        });
-        room.on(RoomEvent.TrackMuted, () => this.syncParticipants());
-        room.on(RoomEvent.TrackUnmuted, () => this.syncParticipants());
-        room.on(RoomEvent.Reconnecting, () => this.state = 'reconnecting');
-        room.on(RoomEvent.Reconnected, () => this.state = 'connected');
-        room.on(RoomEvent.AudioPlaybackStatusChanged, () => this.audioPlaybackBlocked = !room.canPlaybackAudio);
-        room.on(RoomEvent.Disconnected, () => { this.state = 'disconnected'; this.cameraReady = false; this.isMicOn = false; this.isCameraOn = false; this.participants = []; });
-        room.on(RoomEvent.DataReceived, (payload, participant, kind, topic) => {
-          if (!participant || topic !== 'class-chat') return;
-          try {
-            const message = JSON.parse(new TextDecoder().decode(payload));
-            if (typeof message.text !== 'string' || !message.text.trim() || message.text.length > 2000) return;
-            this.chatMessages.push({ text: message.text, sender: participant.name || participant.identity, timestamp: new Date().toLocaleTimeString('vi-VN'), isLocal: false, status: 'received' });
-            this.scrollChatToBottom();
-          } catch { /* Discard non-chat data without granting any action. */ }
-        });
+        const room = markRaw(new this.sdk.Room({ adaptiveStream: true, dynacast: true }));
+        this.room = room; this.bindRoomEvents(room);
         await room.connect(data.server_url, data.token);
         if (this.disposed) { await room.disconnect(); return; }
         await accepted(http.post('/chi-tiet-phong-hop/create', { id_buoi_hoc: this.sessionId, attendance_token: data.attendance_token }));
         this.joined = true;
         if (this.disposed) { await this.leaveAttendance(); await room.disconnect(); return; }
-        this.state = 'connected'; this.currentUserName = room.localParticipant.name || room.localParticipant.identity;
-        this.audioPlaybackBlocked = !room.canPlaybackAudio;
-        this.syncParticipants();
-        // Camera/mic errors do not claim the devices are ready.
-        try { await room.localParticipant.setCameraEnabled(true); this.isCameraOn = true; this.attachLocal(); }
-        catch (error) { this.mediaError = 'Không mở được camera. Cấp quyền camera rồi bật lại.'; }
-        try { await room.localParticipant.setMicrophoneEnabled(true); this.isMicOn = true; }
-        catch (error) { this.mediaError += ' Không mở được micro. Cấp quyền micro rồi bật lại.'; }
+        this.currentUserName = room.localParticipant.name || this.currentUserName;
+        this.currentUserRole = this.roleFromIdentity(room.localParticipant.identity) || this.currentUserRole;
+        this.state = 'connected'; this.audioPlaybackBlocked = !room.canPlaybackAudio; this.syncParticipants();
+        try { await room.localParticipant.setCameraEnabled(true); }
+        catch { this.mediaError = 'Không mở được camera. Bạn vẫn ở trong phòng và có thể bật camera khi đã cấp quyền.'; }
+        try { await room.localParticipant.setMicrophoneEnabled(true); }
+        catch { this.mediaError += ' Không mở được micro. Kiểm tra quyền rồi bật lại.'; }
         this.syncParticipants();
       } catch (error) {
-        this.error = error.message || 'Không thể kết nối phòng học. Kiểm tra mạng và cấu hình dịch vụ video.';
-        this.state = 'failed';
-        await disposeRoom(this.room, [], this.attachments); this.room = null;
+        this.error = error.message || 'Không thể kết nối phòng học. Kiểm tra mạng và dịch vụ video.';
+        const room = this.room; this.room = null;
+        if (room) await room.disconnect();
+        this.state = 'failed'; this.participants = []; this.screenShares = []; this.clearMedia();
       }
-    },
-    attachLocal() {
-      const container = document.getElementById('local-video');
-      if (!container || !this.room) return;
-      container.replaceChildren();
-      for (const pub of this.room.localParticipant.videoTrackPublications.values()) {
-        if (!pub.track || pub.source !== this.sdk.Track.Source.Camera) continue;
-        const node = attachTrack(pub.track, container); node.muted = true; node.style.cssText = 'width:100%;height:100%;object-fit:cover;'; this.attachments.push(node);
-      }
-      this.cameraReady = this.isCameraOn;
-    },
-    attachRemote(track, participant) {
-      const container = document.getElementById(track.kind === 'audio' ? 'remote-audio' : 'video-grid');
-      if (!container) return;
-      if (track.kind === 'audio') {
-        const node = attachTrack(track, container); node.dataset.participant = participant.sid; this.attachments.push(node);
-      } else {
-        const wrapper = document.createElement('div'); wrapper.className = 'video-wrapper shadow-lg'; wrapper.dataset.participant = participant.sid;
-        const node = attachTrack(track, wrapper); node.style.cssText = 'width:100%;height:100%;object-fit:contain;';
-        const label = document.createElement('div'); label.className = 'user-label'; label.textContent = participant.name || participant.identity;
-        wrapper.appendChild(label); container.appendChild(wrapper); this.attachments.push(wrapper);
-      }
-      this.syncParticipants();
     },
     syncParticipants() {
-      if (!this.room || this.room.state !== 'connected') { this.participants = []; return; }
-      this.participants = [this.room.localParticipant, ...this.room.remoteParticipants.values()].map(participant => ({ sid: participant.sid, name: participant.name || participant.identity, isLocal: participant === this.room.localParticipant, audioEnabled: participant.isMicrophoneEnabled, videoEnabled: participant.isCameraEnabled }));
+      if (!this.room || this.room.state !== 'connected') { this.participants = []; this.screenShares = []; return; }
+      const people = [this.room.localParticipant, ...this.room.remoteParticipants.values()];
+      this.participants = people.map(participant => {
+        const isLocal = participant === this.room.localParticipant;
+        const role = this.roleFromIdentity(participant.identity) || (isLocal ? this.currentUserRole : '');
+        const camera = [...participant.videoTrackPublications.values()].find(pub => pub.source === 'camera');
+        return { sid: participant.sid, identity: participant.identity, name: participant.name || (isLocal ? this.currentUserName : this.roleLabel(role)), role, roleLabel: this.roleLabel(role), isLocal,
+          audioEnabled: participant.isMicrophoneEnabled, cameraEnabled: participant.isCameraEnabled, videoEnabled: !!(camera?.track && !camera.isMuted) };
+      }).sort((a, b) => (a.role === 'giao_vien' ? 0 : 1) - (b.role === 'giao_vien' ? 0 : 1) || a.name.localeCompare(b.name, 'vi'));
+      this.screenShares = people.flatMap(participant => [...participant.videoTrackPublications.values()].filter(pub => pub.source === 'screen_share' && pub.track && !pub.isMuted).map(pub => ({ key: pub.trackSid, name: participant.name || 'Thành viên' })));
+      this.isCameraOn = this.room.localParticipant.isCameraEnabled; this.cameraReady = this.isCameraOn;
+      this.isMicOn = this.room.localParticipant.isMicrophoneEnabled; this.isSharingScreen = this.room.localParticipant.isScreenShareEnabled;
+      this.$nextTick(() => this.attachPublishedTracks());
     },
-    async toggleMic() {
-      if (this.state !== 'connected') return;
-      try { await this.room.localParticipant.setMicrophoneEnabled(!this.isMicOn); this.isMicOn = this.room.localParticipant.isMicrophoneEnabled; this.syncParticipants(); }
-      catch { this.mediaError = 'Không thể bật/tắt micro. Kiểm tra quyền thiết bị.'; }
+    attachPublishedTracks() {
+      if (!this.room || this.disposed || this.room.state !== 'connected') return;
+      const desired = new Set();
+      for (const participant of [this.room.localParticipant, ...this.room.remoteParticipants.values()]) {
+        const local = participant === this.room.localParticipant;
+        for (const pub of [...participant.videoTrackPublications.values(), ...participant.audioTrackPublications.values()]) {
+          if (!pub.track || pub.isMuted || (pub.track.kind === 'audio' && local)) continue;
+          const id = pub.track.kind === 'audio' ? 'remote-audio' : pub.source === 'screen_share' ? 'lesson-share-' + pub.trackSid : pub.source === 'camera' ? 'lesson-camera-' + participant.sid : null;
+          const container = id ? document.getElementById(id) : null;
+          if (!container) continue;
+          const key = participant.identity + ':' + pub.trackSid;
+          desired.add(key);
+          const existing = this.mediaAttachments.get(key);
+          if (existing?.track === pub.track && existing.node.parentElement === container) continue;
+          if (existing) { existing.track.detach(existing.node); existing.node.remove(); }
+          const node = attachTrack(pub.track, container);
+          if (local) node.muted = true;
+          node.style.cssText = 'width:100%;height:100%;object-fit:' + (pub.source === 'screen_share' ? 'contain' : 'cover') + ';';
+          this.mediaAttachments.set(key, { track: pub.track, node });
+        }
+      }
+      for (const [key, entry] of this.mediaAttachments) {
+        if (desired.has(key)) continue;
+        entry.track.detach(entry.node); entry.node.remove(); this.mediaAttachments.delete(key);
+      }
     },
-    async startAudio() {
-      try { await this.room.startAudio(); this.audioPlaybackBlocked = !this.room.canPlaybackAudio; }
-      catch { this.mediaError = 'Trình duyệt chưa cho phát âm thanh. Hãy bật quyền âm thanh của trang.'; }
-    },
-    async toggleCamera() {
-      if (this.state !== 'connected') return;
-      try { await this.room.localParticipant.setCameraEnabled(!this.isCameraOn); this.isCameraOn = this.room.localParticipant.isCameraEnabled; this.attachLocal(); this.syncParticipants(); }
-      catch { this.mediaError = 'Không thể bật/tắt camera. Kiểm tra quyền thiết bị.'; }
-    },
-    async toggleScreenShare() {
-      if (this.state !== 'connected') return;
-      try { await this.room.localParticipant.setScreenShareEnabled(!this.isSharingScreen); this.isSharingScreen = this.room.localParticipant.isScreenShareEnabled; }
-      catch { this.mediaError = 'Không thể chia sẻ màn hình hoặc bạn đã hủy lựa chọn.'; }
-    },
+    clearMedia() { for (const entry of this.mediaAttachments.values()) { entry.track.detach(entry.node); entry.node.remove(); } this.mediaAttachments.clear(); },
+    async toggleMic() { if (!this.canUseRoom) return; try { await this.room.localParticipant.setMicrophoneEnabled(!this.isMicOn); this.syncParticipants(); } catch { this.mediaError = 'Không thể bật/tắt micro. Kiểm tra quyền thiết bị.'; } },
+    async toggleCamera() { if (!this.canUseRoom) return; try { await this.room.localParticipant.setCameraEnabled(!this.isCameraOn); this.syncParticipants(); } catch { this.mediaError = 'Không thể bật/tắt camera. Kiểm tra quyền thiết bị.'; } },
+    async toggleScreenShare() { if (!this.canUseRoom) return; try { await this.room.localParticipant.setScreenShareEnabled(!this.isSharingScreen); this.syncParticipants(); } catch { this.mediaError = 'Không thể chia sẻ màn hình hoặc bạn đã hủy lựa chọn.'; } },
+    async startAudio() { try { await this.room.startAudio(); this.audioPlaybackBlocked = !this.room.canPlaybackAudio; } catch { this.mediaError = 'Trình duyệt chưa cho phát âm thanh. Kiểm tra quyền âm thanh của trang.'; } },
     async openSettings() {
       this.showSettings = true;
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        this.audioInputs = devices.filter(device => device.kind === 'audioinput'); this.audioOutputs = devices.filter(device => device.kind === 'audiooutput');
-      } catch { this.mediaError = 'Không thể đọc danh sách thiết bị.'; }
+      try { const devices = await navigator.mediaDevices.enumerateDevices(); this.audioInputs = devices.filter(device => device.kind === 'audioinput'); this.audioOutputs = devices.filter(device => device.kind === 'audiooutput'); }
+      catch { this.mediaError = 'Không thể đọc danh sách thiết bị.'; }
     },
-    async switchDevice(kind, id) {
-      if (this.state !== 'connected') return;
-      try { await this.room.switchActiveDevice(kind, id); }
-      catch { this.mediaError = 'Trình duyệt hoặc thiết bị không hỗ trợ lựa chọn này.'; }
-    },
+    async switchDevice(kind, id) { if (!this.canUseRoom) return; try { await this.room.switchActiveDevice(kind, id); } catch { this.mediaError = 'Trình duyệt hoặc thiết bị không hỗ trợ lựa chọn này.'; } },
     toggleChat() { this.isChatOpen = !this.isChatOpen; this.isParticipantsOpen = false; this.scrollChatToBottom(); },
     toggleParticipants() { this.isParticipantsOpen = !this.isParticipantsOpen; this.isChatOpen = false; },
-    getParticipantInitial(participant) { return (participant.name || '?').slice(0,1).toUpperCase(); },
+    getParticipantInitial(participant) { return String(participant.name || '?').trim().split(/\s+/).slice(-2).map(part => part[0]).join('').toLocaleUpperCase('vi-VN'); },
     scrollChatToBottom() { this.$nextTick(() => { if (this.$refs.chatBox) this.$refs.chatBox.scrollTop = this.$refs.chatBox.scrollHeight; }); },
     async sendChatMessage() {
       if (this.sending) return;
       this.sending = true; this.error = '';
-      try {
-        const sent = await sendRoomMessage(this.room, this.newMessage);
-        this.chatMessages.push({ ...sent, sender: this.currentUserName, timestamp: new Date().toLocaleTimeString('vi-VN') }); this.newMessage = ''; this.scrollChatToBottom();
-      } catch (error) { this.error = error.message || 'Tin nhắn chưa được gửi. Vui lòng thử lại.'; }
+      try { const sent = await sendRoomMessage(this.room, this.newMessage); this.chatMessages.push({ ...sent, sender: this.currentUserName, timestamp: new Date().toLocaleTimeString('vi-VN') }); this.newMessage = ''; this.scrollChatToBottom(); }
+      catch (error) { this.error = error.message || 'Tin nhắn chưa được gửi. Vui lòng thử lại.'; }
       finally { this.sending = false; }
     },
     async cleanup() {
       this.disposed = true;
-      await disposeRoom(this.room, [], this.attachments); this.room = null; this.attachments = [];
-      await this.leaveAttendance();
+      const room = this.room; this.room = null; this.clearMedia();
+      if (room) await room.disconnect();
+      this.participants = []; this.screenShares = []; await this.leaveAttendance();
     },
-    async leaveAttendance() {
-      if (!this.joined || this.leaving) return;
+    leaveAttendance() {
+      if (this.leavePromise) return this.leavePromise;
+      if (!this.joined) return Promise.resolve();
       this.leaving = true;
-      try { await accepted(http.post('/phong-hop/roi-phong', { id_buoi_hoc: this.sessionId })); this.joined = false; }
-      catch (error) { this.error = error.message || 'Đã ngắt video nhưng chưa ghi nhận rời phòng. Vui lòng thử lại.'; }
-      finally { this.leaving = false; }
+      this.leavePromise = Promise.resolve().then(async () => {
+        try { await accepted(http.post('/phong-hop/roi-phong', { id_buoi_hoc: this.sessionId })); this.joined = false; }
+        catch (error) { this.error = error.message || 'Đã ngắt video nhưng chưa ghi nhận rời phòng. Vui lòng thử lại.'; }
+        finally { this.leaving = false; this.leavePromise = null; }
+      });
+      return this.leavePromise;
     },
-    async roiPhong() { await this.cleanup(); if (this.joined) return; this.$router.push(localStorage.getItem('role') === 'giao_vien' ? '/giao-vien/lich-day' : '/hoc-vien/lich-hoc'); }
-  }
+    async roiPhong() { await this.cleanup(); if (this.joined) return; this.$router.push(this.currentUserRole === 'giao_vien' ? '/giao-vien/lich-day' : '/hoc-vien/lich-hoc'); },
+  },
 };
-
 </script>
 
 <style scoped>
-.video-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 16px;
-    align-content: center;
-    justify-content: center;
-    position: relative;
-}
-
-:deep(.video-wrapper),
-:deep(.video-container) {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    max-height: 80vh;
-    border-radius: 16px;
-    overflow: hidden;
-    background-color: #1e293b;
-    border: 3px solid transparent;
-    aspect-ratio: 16 / 9;
-    transition: all 0.3s ease;
-}
-
-:deep(.speaking-border) {
-    border-color: #22c55e !important;
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.6) !important;
-    transform: scale(1.02);
-}
-
-:deep(.user-label) {
-    position: absolute;
-    bottom: 12px;
-    left: 12px;
-    background-color: rgba(0, 0, 0, 0.6);
-    color: white;
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    backdrop-filter: blur(4px);
-    z-index: 10;
-}
-
-.backdrop-blur {
-    backdrop-filter: blur(10px);
-}
-
-.tool-btn {
-    width: 50px;
-    height: 50px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.2s;
-}
-
-.tool-btn:hover {
-    transform: scale(1.1);
-}
-
-.participant-item {
-    min-height: 74px;
-}
-
-.participant-avatar {
-    width: 42px;
-    height: 42px;
-    flex-shrink: 0;
-}
-
-.text-shadow {
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
-}
-
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(5px);
-}
-</style>
-
-<style>
-.video-grid.has-screen-share {
-    position: absolute !important;
-    top: 0;
-    left: 0;
-    width: 100% !important;
-    height: 100% !important;
-    display: flex !important;
-    flex-wrap: wrap;
-    align-content: flex-end;
-    justify-content: flex-end;
-    gap: 16px;
-    padding-bottom: 90px;
-    padding-right: 24px;
-    padding-left: 24px;
-    z-index: 1;
-}
-
-.video-grid.has-screen-share .screen-share-element {
-    position: absolute !important;
-    top: 0;
-    left: 0;
-    width: 100% !important;
-    height: 100% !important;
-    max-height: none !important;
-    z-index: 1;
-    border-radius: 8px;
-    background-color: #000 !important;
-}
-
-.video-grid.has-screen-share .screen-share-element video {
-    background-color: #000 !important;
-}
-
-.video-grid.has-screen-share .video-wrapper,
-.video-grid.has-screen-share .video-container:not(.screen-share-element) {
-    position: relative !important;
-    z-index: 2 !important;
-    width: 240px !important;
-    height: 135px !important;
-    max-height: none !important;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
-    border: 2px solid rgba(255, 255, 255, 0.15);
-    transition: transform 0.3s ease;
-}
-
-.video-grid.has-screen-share .video-wrapper:hover,
-.video-grid.has-screen-share .video-container:not(.screen-share-element):hover {
-    transform: scale(1.05);
-    z-index: 3 !important;
-}
-
-.video-grid.has-screen-share .is-sharing-person {
-    border: 2px solid #3b82f6 !important;
-    box-shadow: 0 0 15px rgba(59, 130, 246, 0.5) !important;
-}
-
-.video-grid.has-screen-share .user-label {
-    font-size: 0.75rem !important;
-    padding: 4px 10px !important;
-    bottom: 8px !important;
-    left: 8px !important;
-}
-
-.video-grid.has-screen-share .badge {
-    font-size: 0.75rem !important;
-}
+.lesson-room { position: relative; display: flex; flex-direction: column; width: 100%; height: 100dvh; min-height: 560px; background: #0f172a; color: #e2e8f0; overflow: hidden; }
+.lesson-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; padding: 18px 24px; background: #111c30; border-bottom: 1px solid #29364b; z-index: 2; }
+.lesson-heading h1 { margin: 0 0 7px; font-size: 18px; font-weight: 700; color: #fff; }
+.lesson-heading p { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; font-size: 13px; margin: 0; }
+.lesson-role { display: inline-block; font-size: 11px; font-weight: 650; border-radius: 5px; padding: 3px 7px; background: #334155; color: #e2e8f0; }
+.lesson-role.hoc_vien { background: #1e3a5f; color: #bfdbfe; }
+.lesson-role.giao_vien { background: #134e4a; color: #99f6e4; }
+.lesson-status { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; font-size: 12px; color: #94a3b8; }
+.lesson-connection { padding: 6px 10px; border-radius: 7px; border: 1px solid #6b5727; background: #332b1a; color: #fde68a; font-weight: 600; }
+.lesson-connection.is-connected { border-color: #226551; background: #143a30; color: #a7f3d0; }
+.lesson-notice, .lesson-audio-notice { flex-shrink: 0; margin: 10px 20px 0; border: 1px solid #80632d; background: #3b301b; color: #fde9b0; padding: 11px 15px; border-radius: 8px; font-size: 13px; }
+.lesson-stage { flex: 1; min-height: 0; overflow-y: auto; padding: 22px; }
+.lesson-stage.has-sidebar { margin-right: 340px; }
+.lesson-lobby { width: min(100%, 410px); margin: 0 auto; padding: 8px 0 16px; }
+.lesson-lobby-intro { text-align: center; margin-bottom: 18px; }
+.lesson-step { display: block; color: #93c5fd; font-size: 12px; margin-bottom: 9px; }
+.lesson-lobby-intro h2 { font-size: 21px; font-weight: 700; color: #fff; margin: 0 0 10px; }
+.lesson-lobby-intro p { margin: 0; font-size: 13px; line-height: 1.7; color: #cbd5e1; }
+.lesson-lobby :deep(.face-proof) { color: #0f172a; border: 0; border-radius: 12px; }
+.lesson-lobby :deep(.face-proof video) { max-width: 100%; }
+.lesson-connecting, .lesson-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100%; text-align: center; color: #cbd5e1; }
+.lesson-connecting h2 { font-size: 20px; color: #fff; margin: 20px 0 10px; }
+.lesson-connecting p { font-size: 13px; }
+.lesson-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 275px), 1fr)); align-content: center; gap: 18px; min-height: 100%; }
+.lesson-person, .lesson-share { position: relative; box-sizing: border-box; width: 100%; min-width: 0; min-height: 300px; aspect-ratio: 16/10; background: #1c2940; border: 1px solid #3a4b65; border-radius: 14px; overflow: hidden; }
+.lesson-person.giao_vien { border-color: #306e68; }
+.lesson-person.hoc_vien { border-color: #365f96; }
+.lesson-video-host { position: absolute; inset: 0; }
+.lesson-camera-off { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 16px 72px; text-align: center; }
+.lesson-initials { display: grid; place-items: center; width: 72px; height: 72px; border-radius: 50%; background: #2c466a; color: #dbeafe; font-size: 24px; font-weight: 700; margin-bottom: 14px; }
+.giao_vien .lesson-initials { background: #1d5753; color: #ccfbf1; }
+.lesson-camera-off h2 { font-size: 17px; font-weight: 700; color: #fff; margin: 0 0 8px; overflow-wrap: anywhere; }
+.lesson-camera-off p { color: #a8b7cc; font-size: 12px; margin: 12px 0 0; }
+.lesson-nameplate { position: absolute; inset: auto 0 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #111c30eb; padding: 12px 15px; color: #fff; }
+.lesson-nameplate strong { display: block; font-size: 13px; font-weight: 650; overflow-wrap: anywhere; }
+.lesson-nameplate span { display: block; font-size: 11px; color: #b4c3d7; margin-top: 3px; }
+.lesson-nameplate > i { font-size: 20px; }
+.is-muted { color: #fda4af; }
+.lesson-share { grid-column: 1/-1; aspect-ratio: 16/9; background: #000; }
+.lesson-share > p { position: absolute; left: 12px; bottom: 8px; background: #111c30e8; color: #fff; padding: 5px 10px; border-radius: 5px; font-size: 12px; }
+.lesson-footer { flex-shrink: 0; display: flex; justify-content: center; padding: 15px 14px 20px; background: #0f172a; z-index: 3; }
+.lesson-toolbar { display: flex; align-items: center; gap: 9px; border: 1px solid #334155; background: #172337; border-radius: 16px; padding: 10px; }
+.lesson-toolbar button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 44px; min-width: 44px; border: 0; border-radius: 10px; background: #34445c; color: #fff; font-size: 20px; }
+.lesson-toolbar button:disabled { opacity: .35; cursor: not-allowed; }
+.lesson-toolbar button.is-off { background: #6b2c3a; }
+.lesson-toolbar button.is-active { background: #2563eb; }
+.lesson-toolbar button.lesson-leave { padding: 0 14px; margin-left: 7px; background: #dc3655; font-size: 13px; font-weight: 650; }
+.lesson-toolbar button > span { font-size: 12px; }
+.lesson-toolbar button:focus-visible, .lesson-sidebar button:focus-visible { outline: 3px solid #93c5fd; outline-offset: 2px; }
+.lesson-sidebar { position: absolute; right: 0; top: 95px; bottom: 100px; width: 340px; max-width: 94vw; display: flex; flex-direction: column; z-index: 4; background: #162238; border: 1px solid #334155; border-radius: 12px 0 0 12px; }
+.lesson-sidebar > header, .lesson-settings > header { display: flex; justify-content: space-between; align-items: center; padding: 16px; gap: 10px; border-bottom: 1px solid #334155; }
+.lesson-sidebar h2, .lesson-settings h2 { margin: 0; color: #fff; font-size: 15px; font-weight: 650; }
+.lesson-sidebar header button, .lesson-settings header button { border: 0; background: transparent; color: #cbd5e1; font-size: 24px; }
+.lesson-messages, .lesson-participant-list { flex: 1; min-height: 0; overflow: auto; padding: 16px; }
+.lesson-message { display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 18px; }
+.lesson-message.is-own { align-items: flex-end; }
+.lesson-message > span { color: #cbd5e1; font-size: 11px; margin-bottom: 5px; }
+.lesson-message > p { margin: 0; padding: 9px 12px; background: #34445c; color: #fff; font-size: 13px; line-height: 1.6; border-radius: 10px; max-width: 95%; overflow-wrap: anywhere; white-space: pre-wrap; }
+.lesson-message.is-own > p { background: #2358b5; }
+.lesson-compose { display: flex; gap: 7px; border-top: 1px solid #334155; padding: 13px; }
+.lesson-compose input { min-width: 0; flex: 1; background: #0f172a; border: 1px solid #475569; color: #fff; padding: 10px; border-radius: 7px; font-size: 13px; }
+.lesson-compose button, .lesson-settings-done { background: #2563eb; color: #fff; border: 0; border-radius: 7px; padding: 9px 12px; font-size: 13px; }
+.lesson-compose button:disabled { opacity: .45; }
+.lesson-sidebar-empty { color: #b4c3d7; font-size: 13px; line-height: 1.6; }
+.lesson-participant-row { display: flex; align-items: center; gap: 10px; margin-bottom: 17px; }
+.lesson-participant-row > div { flex: 1; min-width: 0; }
+.lesson-participant-row strong { font-size: 13px; color: #fff; overflow-wrap: anywhere; }
+.lesson-participant-row p { margin: 3px 0 0; font-size: 11px; color: #b4c3d7; }
+.lesson-list-initials { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: #34445c; font-size: 12px; }
+.lesson-settings-overlay { position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; background: #000a; z-index: 20; }
+.lesson-settings { width: min(400px, 100%); border-radius: 12px; background: #162238; border: 1px solid #475569; padding: 8px 16px 20px; }
+.lesson-settings > header { padding: 10px 0 16px; }
+.lesson-settings label { display: block; margin: 18px 0; font-size: 13px; color: #e2e8f0; }
+.lesson-settings select { display: block; width: 100%; margin-top: 8px; padding: 9px; border-radius: 6px; background: #0f172a; color: #fff; border: 1px solid #475569; }
+.lesson-settings-done { width: 100%; }
+@media (max-width: 700px) { .lesson-header { padding: 14px; } .lesson-stage { padding: 16px; } .lesson-stage.has-sidebar { margin-right: 0; } .lesson-status { align-items: flex-start; } .lesson-sidebar { top: 115px; } .lesson-toolbar { gap: 6px; padding: 8px; } .lesson-toolbar button { min-width: 36px; height: 40px; font-size: 18px; } .lesson-toolbar button.lesson-leave { margin-left: 0; padding: 0 9px; } .lesson-footer { padding: 10px 8px 15px; } }
+@media (max-width: 390px) { .lesson-toolbar { flex-wrap: wrap; justify-content: center; } .lesson-room { min-height: 620px; } }
 </style>
